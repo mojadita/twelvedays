@@ -1,24 +1,36 @@
-	"On the first$\n"
-	"A-\n"
-	"#second$%\n"
-	"#third$_\n"
-	"#fourth$?\n"
-	"#fifth$;\n"
-	"#sixth$@\n"
-	"#seventh$!#eighth$/#ninth$&#tenth$+#eleventh$=#twelfth$\n"
-	"12 Drummers Drumm*=\n"
+@<6 Geje,Lay*;
+$ day of Christmas<my truJlovJsXt to me:
+%<2 TurtlJDovj<]d a-
+&<9 Ladij D]c*/
+#<I
+?<4 Call* BU>_
+!<7 Sw]s,Swimm*@<
++W0 Lor>,Leap*&
+- PartridgJz,Pear Tree
+*zg
+/<8 Mai>,Milk*!
+=W1NbN*+
+_<3 FrXch HXs%
+;<5 GoldX R*s?
+.th
+, a 
+IOn .J
+Je 
+KDrumm
+Q<#
+W<1
+Xen
+Z.$
+N Pip
+EevXZ
+[Qs
+]an
+>ds
+bers
+jes
+zin
+Uir
+V
+Y
 
-	/* @ */ "\n6 Geese a Lay*;",
-	/* $ */ " day of Christmas\nmy true love sent to me:",
-	/* % */ "\n2 Turtle Doves\nand a-",
-	/* & */ "\n9 Ladies Danc*/",
-	/* # */ "\nOn the ",
-	/* ? */ "\n4 Call* Birds_",
-	/* ! */ "\n7 Swans a Swimm*@\n",
-	/* + */ "\n10 Lords a Leap*&",
-	/* - */ " Partridge in a Pear Tree",
-	/* * */ "ing",
-	/* / */ "\n8 Maids a Milk*!",
-	/* = */ "\n11 Pipers Pip*+",
-	/* _ */ "\n3 French Hens%",
-	/* ; */ "\n5 Golden R*s?",
+IfUst$<A-[econd$%Q.Ud$_QfourZ?QfifZ;[ixZ@[E!#eighZ/#nzZ&#tXZ+#elE=#twelfZW2 Kb K*=

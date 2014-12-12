@@ -43,8 +43,6 @@ struct node *new_node(char *s, int l);
 /* variables */
 
 char buffer[MAX];
-char isChar[256];
-
 
 /* functions */
 struct node *new_node(char *s, int l)
@@ -87,16 +85,17 @@ int node_fprint(const void *p, FILE *f)
 /* main program */
 int main (int argc, char **argv)
 {
-	int n = read(0, buffer, sizeof buffer - 1);
 	char *p;
 	AVL_TREE t;
 	AVL_ITERATOR it;
+	int n = read(0, buffer, sizeof buffer - 1);
 	if (n < 0) {
 		fprintf(stderr, "cc:stdin:%s:%d:read:%s(errno=%d)\n",
 				__FILE__, __LINE__, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	} /* if */
 	buffer[n] = 0;
+
 	t = new_avl_tree(node_fcomp, NULL, NULL, node_fprint);
 	for (p = buffer; *p; p++, n--) {
 		int l;
@@ -122,7 +121,7 @@ int main (int argc, char **argv)
 		struct node *N = avl_iterator_data(it);
 		int f = (N->l - 1)*(N->n - 1);
 		
-		if (f > n) {
+		if (f >= n) {
 			printf("l=%04d n=%04d f=%4d: [%.*s]\n",
 					N->l, N->n, f, N->l, N->s);
 			n = f;
