@@ -41,30 +41,33 @@
 
 /* types */
 struct trie_node {
-	char				c;
-	char				*b;
-	int					l;
-	int					n;
-	struct trie_node	*prt;
-	AVL_TREE			sub;
+	char				c; /* the character encoded in this node */
+	char				*b; /* pointer to the beginning of this string */
+	int					l; /* length of this trie. */
+	int					n; /* number of times this string repeats */
+	struct trie_node	*prt; /* parent */
+	AVL_TREE			sub; /* avl tree to subnodes of this trie */
 };
 
 /* variables */
 
-char buffer[MAX];
-char *p;
-int bs;
+char buffer[MAX]; /* buffer to store everything */
+char *p; /* pointer to free space in buffer */
+int bs; /* free space size */
 
-char *strings[N];
-int strings_n = 0;
+char *strings[N]; /* strings table for the macros/strings */
+int strings_n = 0; /* number of strings */
 
 struct trie_node *main_trie = NULL;
 
 /* functions */
+
+/* TODO: fill this function. */
 void do_usage(void)
 {
 } /* do_usage */
 
+/* constructor */
 struct trie_node *new_node(
 	struct trie_node *prt,
 	char c,
@@ -86,6 +89,11 @@ struct trie_node *new_node(
 	return res;
 } /* new_node */
 
+/**
+ * this function adds a string to the trie, beginning at pos t.
+ * @param s is the string to add.
+ * @param t is the trie node to add this string to.
+ */
 struct trie_node *add_string(char *s, struct trie_node *t)
 {
 	char *s2;
@@ -104,6 +112,10 @@ struct trie_node *add_string(char *s, struct trie_node *t)
 	return t;
 } /* add_string */
 
+/**
+ * process a file reading its contents into a string.
+ * @param n name of the file to open or NULL to read from stdin.
+ */
 void process(char *n)
 {
 	int in = 0; /* stdin */
@@ -140,12 +152,32 @@ void process(char *n)
 	
 } /* process */
 
+/**
+ * The next function gives, for a given trie_node *n, the
+ * number of characters saved by using this node as a macro.
+ * the number of characters saved is the length of this macro (n->l)
+ * by the number of times it appears in the code (n->n) minus
+ * one character per each time it appears (-n->n) minus the
+ * table entry (-n->l - 1) (one char to identify the macro used)
+ * so, in total we have (n->l)*(n->n) -(n->n) -(n->l) - 1 ==
+ * (n->l - 1)*(n->n - 1) - 2.
+ * @param n node to calculate f for.
+ * @return the value calculated as above.
+ */
 int f(struct trie_node *n)
 {
 	return (n->l - 1)*(n->n - 1) - 2;
-}
+} /* f */
 
-struct trie_node *recorre_trie(struct trie_node *t)
+/**
+ * This function walks a trie calculating f(n) for each node n.
+ * It selects the node with the largest value of f and returns
+ * a reference to it as return value.
+ * @param t the node to begin walk on.  Normally this parameter
+ * is the root node of the trie.
+ * @return the node with the largest value of f(n).
+ */
+struct trie_node *walk_trie(struct trie_node *t)
 {
 	AVL_ITERATOR i;
 	struct trie_node *res = t;
@@ -154,16 +186,21 @@ struct trie_node *recorre_trie(struct trie_node *t)
 	for (i = avl_tree_first(t->sub); i; i = avl_iterator_next(i)) {
 		struct trie_node *n = avl_iterator_data(i);
 		int fn;
-		n = recorre_trie(n);
+		n = walk_trie(n);
 		if ((fn = f(n)) > fres) {
 			res = n;
 			fres = fn;
-		}
+		} /* if */
 	} /* for */
 	return res;
-} /* recorre_trie */
+} /* walk_trie */
 
-/* main program */
+/**
+ * main program.  Processes all files and returns one string
+ * for each file in strings[]. In the process, all strings are
+ * used to construct the trie we use to get the substring with
+ * great f value.
+ */
 int main (int argc, char **argv)
 {
 
@@ -192,10 +229,9 @@ int main (int argc, char **argv)
 			process(argv[i]);
 	} else	process(NULL);
 
-	max = recorre_trie(main_trie);
+	max = walk_trie(main_trie);
 	printf(D("max: [%.*s], l=%d, n=%d, f=%d\n"),
 		max->l, max->b, max->l, max->n, f(max));
-
 } /* main */
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */
