@@ -3,7 +3,7 @@
 # Date: vie dic 12 19:19:35 EET 2014
 # Disclaimer: (C) 2014 LUIS COLORADO
 
-targets = ct td
+targets = ct td trie
 
 all: $(targets)
 clean:
@@ -15,5 +15,11 @@ ct: $(ct_objs)
 	$(CC) $(LDFLAGS) -o $@ $(ct_objs) $(ct_libs)
 
 td_objs = td.o
+td_libs = 
 td: $(td_objs)
-	$(CC) $(LDFLAGS) -o $@ $(td_objs)
+	$(CC) $(LDFLAGS) -o $@ $(td_objs) $(td_libs)
+
+trie_objs= trie.o
+trie_libs= -lavl
+trie: $(trie_objs)
+	$(CC) $(LDFLAGS) -o $@ $(trie_objs) $(trie_libs)
