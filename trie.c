@@ -40,14 +40,23 @@
 #define D(X) __FILE__":%d:%s:" X, __LINE__, __func__
 
 /* types */
+
+/* ref_buff form a stack of references into the text where we have
+ * found this substring. If this reference doesn't overlapp with the
+ * previous one, we push it onto the stack making it the last one. */
+struct ref_buff {
+	const char *b;
+	struct ref_buff *nxt;
+}; /* ref_buff */
+
 struct trie_node {
 	char				c; /* the character encoded in this node */
-	char				*b; /* pointer to the beginning of this string */
-	int					l; /* length of this trie. */
 	int					n; /* number of times this string repeats */
-	struct trie_node	*prt; /* parent */
+	int					l; /* length of this string. */
+	struct trie_node	*prt; /* parent of this trie node. */
 	AVL_TREE			sub; /* avl tree to subnodes of this trie */
-};
+	struct ref_buff		*refs; /* stack of references. */
+}; /* trie_node */
 
 /* variables */
 
@@ -68,49 +77,81 @@ void do_usage(void)
 } /* do_usage */
 
 /* constructor */
-struct trie_node *new_node(
-	struct trie_node *prt,
-	char c,
-	char *b,
-	int l,
-	int n)
+struct trie_node *new_node(struct trie_node *prt, const char c)
 {
 	struct trie_node *res;
 
 	assert(res = malloc(sizeof(struct trie_node)));
 
 	res->c = c;
-	res->b = b;
-	res->l = l; 
-	res->n = n;
-	res->prt = prt;
+	res->n = 0; /* it will be incremented when a reference is attached to it. */
+	res->l = prt ? prt->l + 1 : 0;
+	res->prt = prt; /* previous node in the trie. */
 	res->sub = new_avl_tree(NULL, NULL, NULL, NULL);
+	res->refs = NULL;
+	if (prt) avl_tree_put(prt->sub, (const void *)(int)c, res);
 
 	return res;
 } /* new_node */
+
+struct ref_buff *add_ref(struct trie_node *n, const char *b)
+{
+	struct ref_buff *res;
+
+	assert(res = malloc(sizeof(struct ref_buff)));
+
+	res->b = b; /* buffer pointer, length is in trie node. */
+	res->nxt = n->refs; /* stack insert */
+	n->refs = res;
+	n->n++; /* increment the number of references */
+
+	return res;
+} /* add_ref */
 
 /**
  * this function adds a string to the trie, beginning at pos t.
  * @param s is the string to add.
  * @param t is the trie node to add this string to.
  */
-struct trie_node *add_string(char *s, struct trie_node *t)
+struct trie_node *add_string(const char *s, struct trie_node *t)
 {
-	char *s2;
+	const char *s2;
+
 	for (s2 = s;*s;s++) {
-		struct trie_node *n = avl_tree_get(t->sub, (void *)*s);
-		if (!n) {
-			n = new_node(t, *s, s2, t->l+1, 1);
-			avl_tree_put(t->sub, (void *)*s, n);
+		/* search the new character in the trie */
+		struct trie_node *n = avl_tree_get(t->sub, (void *)(int)*s);
+
+		if (!n) { /* not found */
+			n = new_node(t, *s); /* add it */
+		} /* if */
+
+		/* add the reference if it doesn't overlap the previous */
+		if (   !n->refs /* no previous reference */
+			|| (n->refs->b + n->l < s2)) /* no overlap */
+		{
+			add_ref(n, s2); 
 		} /* if */
 		t = n;
-		if (t->b + t->l < s2) {
-			t->b = s2;
-			t->n++;
-		} /* if */
 	} /* for */
+
 	return t;
 } /* add_string */
+
+void del_trie(struct trie_node *t)
+{
+	AVL_ITERATOR i;
+	while (t->refs) {
+		struct ref_buff *p = t->refs;
+		t->refs = p->nxt;
+		free(p);
+	} /* while */
+	for (i = avl_tree_first(t->sub); i; i = avl_iterator_next(i)) {
+		struct trie_node *p = avl_iterator_data(i);
+		del_trie(p);
+	} /* for */
+	free_avl_tree(t->sub);
+	free(t);
+} /* del_trie */
 
 /**
  * process a file reading its contents into a string.
@@ -192,6 +233,7 @@ struct trie_node *walk_trie(struct trie_node *t)
 			fres = fn;
 		} /* if */
 	} /* for */
+
 	return res;
 } /* walk_trie */
 
@@ -221,7 +263,7 @@ int main (int argc, char **argv)
 	bs = sizeof buffer;
 	p = buffer;
 
-	main_trie = new_node(NULL, 0, NULL, 0, 0);
+	main_trie = new_node(NULL, 0);
 
 	if (argc) {
 		int i;
@@ -231,7 +273,8 @@ int main (int argc, char **argv)
 
 	max = walk_trie(main_trie);
 	printf(D("max: [%.*s], l=%d, n=%d, f=%d\n"),
-		max->l, max->b, max->l, max->n, f(max));
+		max->l, max->refs->b, max->l, max->n, f(max));
+	del_trie(main_trie); main_trie = NULL;
 } /* main */
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */

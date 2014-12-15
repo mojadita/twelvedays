@@ -7,7 +7,7 @@ targets = ct td trie
 
 all: $(targets)
 clean:
-	$(RM) $(targets) $(ct_objs) $(td_objs)
+	$(RM) $(targets) $(ct_objs) $(td_objs) $(trie_objs)
 
 ct_objs = ct.o
 ct_libs = -lavl
