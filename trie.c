@@ -33,30 +33,13 @@
 #include <errno.h>
 #include <assert.h>
 #include <avl.h>
+#include "trie.h"
 
 /* constants */
 #define MAX 65536
 #define N	512
-#define D(X) __FILE__":%d:%s:" X, __LINE__, __func__
 
 /* types */
-
-/* ref_buff form a stack of references into the text where we have
- * found this substring. If this reference doesn't overlapp with the
- * previous one, we push it onto the stack making it the last one. */
-struct ref_buff {
-	const char *b;
-	struct ref_buff *nxt;
-}; /* ref_buff */
-
-struct trie_node {
-	char				c; /* the character encoded in this node */
-	int					n; /* number of times this string repeats */
-	int					l; /* length of this string. */
-	struct trie_node	*prt; /* parent of this trie node. */
-	AVL_TREE			sub; /* avl tree to subnodes of this trie */
-	struct ref_buff		*refs; /* stack of references. */
-}; /* trie_node */
 
 /* variables */
 
@@ -70,6 +53,8 @@ int strings_n = 0; /* number of strings */
 struct trie_node *main_trie = NULL;
 
 /* functions */
+static struct trie_node *new_node(struct trie_node *prt, const char c);
+static struct ref_buff *add_ref(struct trie_node *n, const char *b);
 
 /* TODO: fill this function. */
 void do_usage(void)
@@ -77,7 +62,7 @@ void do_usage(void)
 } /* do_usage */
 
 /* constructor */
-struct trie_node *new_node(struct trie_node *prt, const char c)
+static struct trie_node *new_node(struct trie_node *prt, const char c)
 {
 	struct trie_node *res;
 
@@ -205,7 +190,7 @@ void process(char *n)
  * @param n node to calculate f for.
  * @return the value calculated as above.
  */
-int f(struct trie_node *n)
+static int f(struct trie_node *n)
 {
 	return (n->l - 1)*(n->n - 1) - 2;
 } /* f */
