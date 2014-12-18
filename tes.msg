@@ -1,97 +1,81 @@
-<1>Se esperaba 
-<2> cadena de caracteres
-<3>o se permite
-<4> archivo
-<5> constante
-<6>una variable
-<7> de 
-<8>una expresion
-<9> entera
-<A> invalid
-<B>dentificador
-<C>o 
-<D>er
-<E>en
-<F>aqui
-
-01<1>';'
-02<1>':'
-03<1>','
-04<1>'('
-05<1>')'
-06<1>'='
-07<1>':='
-08<1>'['
-09<1>']'
-10<1>'.'
-11<1>'..'
-12<1>BEGIN
-13<1>DO
-14<1>END
-15<1>OF
-16<1>PROCEDURE <C>FUNCTION
-17<1>THEN
-18<1>TO <C>DOWNTO
-20<1><8> booleana
-21<1><6><4>
-22<1>una<5><9>
-23<1><8><9>
-24<1><6><9>
-25<1>una<5><9> <C>real
-26<1><8><9> <C>real
-27<1><6><9> <C>real
-28<1><6> punt<D>o
-29<1><6> registro
-30<1>un tip<C>simple
-31<1><8> simple
-32<1>una<5><2>
-33<1><8><2>
-34<1><6><2>
-35<1>un<4><7>texto
-36<1>un i<B><7>tipo
-37<1>un<4> sin tipo
+01Se esperaba ';'
+02Se esperaba ':'
+03Se esperaba ','
+04Se esperaba '('
+05Se esperaba ')'
+06Se esperaba '='
+07Se esperaba ':='
+08Se esperaba '['
+09Se esperaba ']'
+10Se esperaba '.'
+11Se esperaba '..'
+12Se esperaba BEGIN
+13Se esperaba DO
+14Se esperaba END
+15Se esperaba OF
+16Se esperaba PROCEDURE o FUNCTION
+17Se esperaba THEN
+18Se esperaba TO o DOWNTO
+20Se esperaba una expresion booleana
+21Se esperaba una variable archivo
+22Se esperaba una constante entera
+23Se esperaba una expresion entera
+24Se esperaba una variable entera
+25Se esperaba una constante entera o real
+26Se esperaba una expresion entera o real
+27Se esperaba una variable entera o real
+28Se esperaba una variable puntero
+29Se esperaba una variable registro
+30Se esperaba un tipo simple
+31Se esperaba una expresion simple
+32Se esperaba una constante cadena de caracteres
+33Se esperaba una expresion cadena de caracteres
+34Se esperaba una variable cadena de caracteres
+35Se esperaba un archivo de texto
+36Se esperaba un identificador de tipo
+37Se esperaba un archivo sin tipo
 40Etiqueta indefinida
-41I<B> desconocid<C><C><D>ror<7>sintaxis
-42Tip<C>punt<D><C>indefinid<C><E> las definiciones<7>tipos previas
-43I<B> <C>etiqueta duplicado
-44Discordancia<7>tipos
-45Constgante fu<D>a<7>rango
-46La<5> y el selector CASE n<C>concu<D>dan <E> tipo
-47Los tipos<7>los op<D>andos n<C>concu<D>dan con el opo<D>ador
-48Tipo<7>resultado<A>o
-49Longitud de<2><A>a
-50La longitud<7>la<5><2> n<C>concu<D>da con el tipo
-51Tip<C>subrang<C>base<A>o
-52Limite inf<D>ior mayor que limite sup<D>ior
-53Palabra res<D>vada
+41Identificador desconocido o error de sintaxis
+42Tipo puntero indefinido en las definiciones de tipos previas
+43Identificador o etiqueta duplicado
+44Discordancia de tipos
+45Constgante fuera de rango
+46La constante y el selector CASE no concuerdan en tipo
+47Los tipos de los operandos no concuerdan con el operador
+48Tipo de resultado invalido
+49Longitud de cadena de caracteres invalida
+50La longitud de la constante cadena de caracteres no concuerda con el tipo
+51Tipo subrango base invalido
+52Limite inferior mayor que limite superior
+53Palabra reservada
 54Asignacion ilegal
-55Constante de<2> que sobrepasa la linea
-56Error <E><5><9>
-57Error <E><5> real
-58Caract<D> ilegal <E> i<B>
-60N<3>n<5>s <F>
-61N<3>n<4>s ni punt<D>os <F>
-62N<3>n variables con estructura <F>
-63N<3>n<4>s<7>text<C><F>
-64N<3>n<4>s<7>text<C>ni sin tip<C><F>
-65N<3>n<4>s sin tip<C><F>
-66N<3> <E>trada/salida
-67Los<4>s deb<E> s<D> parametros por variable
-68Los compon<E>tes<7>un<4> n<C>pued<E> s<D><4>s
-69Ord<E>ami<E>to<A>o<7>campos
-70Tip<C>base para conjunt<C>fu<D>a<7>rango
-71GOTO<A>o
-72Etiqueta fu<D>a del bloque actual
-73Procedimi<E>t<C>FORWARD indefinido
+55Constante de cadena de caracteres que sobrepasa la linea
+56Error en constante entera
+57Error en constante real
+58Caracter ilegal en identificador
+60No se permiten constantes aqui
+61No se permiten archivos ni punteros aqui
+62No se permiten variables con estructura aqui
+63No se permiten archivos de texto aqui
+64No se permiten archivos de texto ni sin tipo aqui
+65No se permiten archivos sin tipo aqui
+66No se permite entrada/salida
+67Los archivos deben ser parametros por variable
+68Los componentes de un archivo no pueden ser archivos
+69Ordenamiento invalido de campos
+70Tipo base para conjunto fuera de rango
+71GOTO invalido
+72Etiqueta fuera del bloque actual
+73Procedimiento FORWARD indefinido
 74Error INLINE
-75Us<C>ilegal<7>ABSOLUTE
-76Los ov<D>lays n<C>pued<E> s<D> FORWARD
-77Los ov<D>lays n<3>n <E> mod<C>directo
-90Archiv<C>n<C><E>contrado
-91Final<7>fu<E>te inesp<D>ado
-92Imposible crear<4><7>ov<D>lay
-93Directiva<7>compilacion<A>a
-96N<3> anidar includes
-97Anidami<E>t<C>excesivo<7>WITHs
-98Desbordami<E>to<7>memoria
-99Desbordami<E>t<C>del compilador
+75Uso ilegal de ABSOLUTE
+76Los overlays no pueden ser FORWARD
+77Los overlays no se permiten en modo directo
+90Archivo no encontrado
+91Final de fuente inesperado
+92Imposible crear archivo de overlay
+93Directiva de compilacion invalida
+96No se permite anidar includes
+97Anidamiento excesivo de WITHs
+98Desbordamiento de memoria
+99Desbordamiento del compilador

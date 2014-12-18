@@ -32,7 +32,7 @@
 
 /* functions */
 static struct trie_node *new_node(struct trie_node *prt, const char c);
-static struct ref_buff *add_ref(struct trie_node *n, const char *b);
+static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *d);
 
 struct trie_node *new_trie(void)
 {
@@ -57,7 +57,7 @@ static struct trie_node *new_node(struct trie_node *prt, const char c)
 	return res;
 } /* new_node */
 
-static struct ref_buff *add_ref(struct trie_node *n, const char *b)
+static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *d)
 {
 	struct ref_buff *res;
 
@@ -65,6 +65,7 @@ static struct ref_buff *add_ref(struct trie_node *n, const char *b)
 
 	res->b = b; /* buffer pointer, length is in trie node. */
 	res->nxt = n->refs; /* stack insert */
+	res->d = d;
 	n->refs = res;
 	n->n++; /* increment the number of references */
 
@@ -76,7 +77,7 @@ static struct ref_buff *add_ref(struct trie_node *n, const char *b)
  * @param s is the string to add.
  * @param t is the trie node to add this string to.
  */
-struct trie_node *add_string(const char *s, struct trie_node *t)
+struct trie_node *add_string(const char *s, struct trie_node *t, const void *d)
 {
 	const char *s2;
 
@@ -92,7 +93,7 @@ struct trie_node *add_string(const char *s, struct trie_node *t)
 		if (   !n->refs /* no previous reference */
 			|| (n->refs->b + n->l < s2)) /* no overlap */
 		{
-			add_ref(n, s2); 
+			add_ref(n, s2, d); 
 		} /* if */
 		t = n;
 	} /* for */
@@ -144,14 +145,15 @@ static int f(struct trie_node *n)
 struct trie_node *walk_trie(struct trie_node *t)
 {
 	AVL_ITERATOR i;
-	struct trie_node *res = t;
+	struct trie_node *res = NULL;
 	int fres = f(res);
 	
 	for (i = avl_tree_first(t->sub); i; i = avl_iterator_next(i)) {
 		struct trie_node *n = avl_iterator_data(i);
 		int fn;
+		printf(D("[%.*s]: c=%c, n=%d, l=%d\n"), t->l, t->refs ? t->refs : "", t->c, t->n, t->l);
 		n = walk_trie(n);
-		if ((fn = f(n)) > fres) {
+		if (!res || ((fn = f(n)) > fres)) {
 			res = n;
 			fres = fn;
 		} /* if */

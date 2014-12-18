@@ -36,6 +36,9 @@
 #define MAX 65536
 #define N	512
 
+void process_line(const char *n);
+void process_file(const char *n);
+
 /* variables */
 
 char buffer[MAX]; /* buffer to store everything */
@@ -131,9 +134,8 @@ int main (int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	int opt;
-	void (*process)(const char *n) = process_line;
-	int i;
-
+	void (*process)(const char *) = process_line;
+	int i, mark;
 
 	while ((opt = getopt(argc, argv, "hfl")) != EOF) {
 		switch(opt) {
@@ -151,17 +153,30 @@ int main (int argc, char **argv)
 			process(argv[i]);
 	} else	process(stdin_name);
 
-	for(i = 0x80; i < 0xc0; i++) {
+	mark = strings_n;
+	for(i = 0x80; i < 0x81; i++) {
+		struct trie_node *root_trie, *max;
+		int j;
+		struct ref_buff *ref;
+
 		printf(D("PASS #0x%02x:\n"), i);
+		assert(root_trie = new_trie());
+		for (j = 0; j < strings_n; j++) {
+			add_string(strings[j], root_trie, strings[j]);
+		} /* for */
+		max = walk_trie(root_trie);
+
+		if (max != root_trie) {
+			printf(D("  max: [%.*s], l=%d, n=%d\n"),
+				max->l, max->refs->b, max->l, max->n);
+
+			for (ref = max->refs; ref; ref = ref->nxt)
+				printf(D("    appears in [%s]\n"), ref->d);
+		}
+
+		del_trie(root_trie);
 	} /* for */
 
-
-#if 0
-	max = walk_trie(main_trie);
-	printf(D("max: [%.*s], l=%d, n=%d\n"),
-		max->l, max->refs->b, max->l, max->n);
-	del_trie(main_trie); main_trie = NULL;
-#endif
 } /* main */
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */

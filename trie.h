@@ -39,6 +39,7 @@ static char TRIE_H_RCSId[] = "\n$Id: header.h.m4,v 1.7 2005/11/07 19:39:53 luis 
 struct ref_buff {
 	const char *b;
 	struct ref_buff *nxt;
+	const void *d;
 }; /* ref_buff */
 
 struct trie_node {
@@ -52,7 +53,7 @@ struct trie_node {
 
 /* prototypes */
 struct trie_node *new_trie(void);
-struct trie_node *add_string(const char *s, struct trie_node *t);
+struct trie_node *add_string(const char *s, struct trie_node *t, const void *d);
 struct trie_node *walk_trie(struct trie_node *t);
 void del_trie(struct trie_node *t);
 
