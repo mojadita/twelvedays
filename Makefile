@@ -9,7 +9,7 @@ all: $(targets)
 clean:
 	$(RM) $(targets) $(ct_objs) $(td_objs) $(trie_objs) $(exp_objs)
 
-ct_objs = ct.o
+ct_objs = ct.o fprintbuf.o
 ct_libs = -lavl
 ct: $(ct_objs)
 	$(CC) $(LDFLAGS) -o $@ $(ct_objs) $(ct_libs)
@@ -19,7 +19,7 @@ td_libs =
 td: $(td_objs)
 	$(CC) $(LDFLAGS) -o $@ $(td_objs) $(td_libs)
 
-trie_objs= trie.o
+trie_objs= trie_main.o trie.o
 trie_libs= -lavl
 trie: $(trie_objs)
 	$(CC) $(LDFLAGS) -o $@ $(trie_objs) $(trie_libs)

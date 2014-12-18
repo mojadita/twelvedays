@@ -21,45 +21,23 @@
 #define IN_TRIE_C
 
 /* Standard include files */
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <time.h>
 #include <errno.h>
 #include <assert.h>
 #include <avl.h>
 #include "trie.h"
 
-/* constants */
-#define MAX 65536
-#define N	512
-
-/* types */
-
-/* variables */
-
-char buffer[MAX]; /* buffer to store everything */
-char *p; /* pointer to free space in buffer */
-int bs; /* free space size */
-
-char *strings[N]; /* strings table for the macros/strings */
-int strings_n = 0; /* number of strings */
-
-struct trie_node *main_trie = NULL;
-
 /* functions */
 static struct trie_node *new_node(struct trie_node *prt, const char c);
 static struct ref_buff *add_ref(struct trie_node *n, const char *b);
 
-/* TODO: fill this function. */
-void do_usage(void)
+struct trie_node *new_trie(void)
 {
-} /* do_usage */
+	return new_node(NULL, 0);
+} /* new_trie */
 
 /* constructor */
 static struct trie_node *new_node(struct trie_node *prt, const char c)
@@ -74,12 +52,12 @@ static struct trie_node *new_node(struct trie_node *prt, const char c)
 	res->prt = prt; /* previous node in the trie. */
 	res->sub = new_avl_tree(NULL, NULL, NULL, NULL);
 	res->refs = NULL;
-	if (prt) avl_tree_put(prt->sub, (const void *)(int)c, res);
+	if (prt) avl_tree_put(prt->sub, (const void *)c, res);
 
 	return res;
 } /* new_node */
 
-struct ref_buff *add_ref(struct trie_node *n, const char *b)
+static struct ref_buff *add_ref(struct trie_node *n, const char *b)
 {
 	struct ref_buff *res;
 
@@ -104,7 +82,7 @@ struct trie_node *add_string(const char *s, struct trie_node *t)
 
 	for (s2 = s;*s;s++) {
 		/* search the new character in the trie */
-		struct trie_node *n = avl_tree_get(t->sub, (void *)(int)*s);
+		struct trie_node *n = avl_tree_get(t->sub, (void *)*s);
 
 		if (!n) { /* not found */
 			n = new_node(t, *s); /* add it */
@@ -137,46 +115,6 @@ void del_trie(struct trie_node *t)
 	free_avl_tree(t->sub);
 	free(t);
 } /* del_trie */
-
-/**
- * process a file reading its contents into a string.
- * @param n name of the file to open or NULL to read from stdin.
- */
-void process(char *n)
-{
-	int in = 0; /* stdin */
-	int rd;
-	char *q;
-	int l;
-	if (n) {
-		in = open(n, O_RDONLY);
-		if (in < 0) {
-			fprintf(stderr,
-				D("file %s: %s(errno=%d)\n"),
-				n, strerror(errno), errno);
-			exit(EXIT_FAILURE);
-		} /* if */
-	} /* if */
-	while ((rd = read(in, p, bs-1)) > 0) {
-		strings[strings_n++] = p;
-		p += rd;
-		bs -= rd;
-		*p++ = '\0'; bs--;
-	} /* while */
-	if (rd < 0) {
-		fprintf(stderr,
-			D("read %s: %s(errno=%d)\n"),
-			n, strerror(errno), errno);
-		exit(EXIT_FAILURE);
-	} /* if */
-	
-	if (in > 0) close(in);
-
-	for (q = strings[strings_n-1], l = strlen(q); l; l--, q++) {
-		add_string(q, main_trie);
-	} /* for */
-	
-} /* process */
 
 /**
  * The next function gives, for a given trie_node *n, the
@@ -221,45 +159,5 @@ struct trie_node *walk_trie(struct trie_node *t)
 
 	return res;
 } /* walk_trie */
-
-/**
- * main program.  Processes all files and returns one string
- * for each file in strings[]. In the process, all strings are
- * used to construct the trie we use to get the substring with
- * great f value.
- */
-int main (int argc, char **argv)
-{
-
-	extern int optind;
-	extern char *optarg;
-	int opt;
-	int i;
-	struct trie_node *max;
-
-	while ((opt = getopt(argc, argv, "h")) != EOF) {
-		switch(opt) {
-		case 'h':
-		  do_usage(); exit(0);
-		} /* switch */
-	} /* while */
-
-	argc -= optind; argv += optind;
-	bs = sizeof buffer;
-	p = buffer;
-
-	main_trie = new_node(NULL, 0);
-
-	if (argc) {
-		int i;
-		for (i = 0; i < argc; i++)
-			process(argv[i]);
-	} else	process(NULL);
-
-	max = walk_trie(main_trie);
-	printf(D("max: [%.*s], l=%d, n=%d, f=%d\n"),
-		max->l, max->refs->b, max->l, max->n, f(max));
-	del_trie(main_trie); main_trie = NULL;
-} /* main */
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */

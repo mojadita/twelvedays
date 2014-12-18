@@ -51,6 +51,7 @@ struct trie_node {
 }; /* trie_node */
 
 /* prototypes */
+struct trie_node *new_trie(void);
 struct trie_node *add_string(const char *s, struct trie_node *t);
 struct trie_node *walk_trie(struct trie_node *t);
 void del_trie(struct trie_node *t);

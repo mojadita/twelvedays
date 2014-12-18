@@ -23,12 +23,14 @@
 /* Standard include files */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <avl.h>
 
 /* constants */
 #define MAX		65536
+#define D(X) __FILE__":%d:" X, __LINE__
 
 /* types */
 struct node {
@@ -90,8 +92,9 @@ int main (int argc, char **argv)
 	AVL_ITERATOR it;
 	int n = read(0, buffer, sizeof buffer - 1);
 	if (n < 0) {
-		fprintf(stderr, "cc:stdin:%s:%d:read:%s(errno=%d)\n",
-				__FILE__, __LINE__, strerror(errno), errno);
+		fprintf(stderr,
+			D("read:%s(errno=%d)\n"),
+			strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	} /* if */
 	buffer[n] = 0;
