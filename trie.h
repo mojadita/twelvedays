@@ -37,7 +37,7 @@ static char TRIE_H_RCSId[] = "\n$Id: header.h.m4,v 1.7 2005/11/07 19:39:53 luis 
  * found this substring. If this reference doesn't overlapp with the
  * previous one, we push it onto the stack making it the last one. */
 struct ref_buff {
-	const char *b;
+	char *b;
 	struct ref_buff *nxt;
 	const void *d;
 }; /* ref_buff */

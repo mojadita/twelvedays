@@ -77,11 +77,11 @@ static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *
  * @param s is the string to add.
  * @param t is the trie node to add this string to.
  */
-struct trie_node *add_string(const char *s, struct trie_node *t, const void *d)
+struct trie_node *add_string(const char *s, struct trie_node *t, const void *data)
 {
-	const char *s2;
+	const char *saved_s = s; 
 
-	for (s2 = s;*s;s++) {
+	for (;*s;s++) {
 		/* search the new character in the trie */
 		struct trie_node *n = avl_tree_get(t->sub, (void *)*s);
 
@@ -89,11 +89,11 @@ struct trie_node *add_string(const char *s, struct trie_node *t, const void *d)
 			n = new_node(t, *s); /* add it */
 		} /* if */
 
-		/* add the reference if it doesn't overlap the previous */
+		/* add the reference only if it doesn't overlap the previous */
 		if (   !n->refs /* no previous reference */
-			|| (n->refs->b + n->l < s2)) /* no overlap */
+			|| (n->refs->b + n->l <= saved_s)) /* no overlap */
 		{
-			add_ref(n, s2, d); 
+			add_ref(n, saved_s, data); 
 		} /* if */
 		t = n;
 	} /* for */
@@ -131,7 +131,9 @@ void del_trie(struct trie_node *t)
  */
 static int f(struct trie_node *n)
 {
-	return (n->l - 1)*(n->n - 1) - 2;
+	return n
+		? (n->l - 1)*(n->n - 1) - 2
+		: -1;
 } /* f */
 
 /**
@@ -145,15 +147,22 @@ static int f(struct trie_node *n)
 struct trie_node *walk_trie(struct trie_node *t)
 {
 	AVL_ITERATOR i;
-	struct trie_node *res = NULL;
+	struct trie_node *res = t;
 	int fres = f(res);
 	
 	for (i = avl_tree_first(t->sub); i; i = avl_iterator_next(i)) {
 		struct trie_node *n = avl_iterator_data(i);
 		int fn;
-		printf(D("[%.*s]: c=%c, n=%d, l=%d\n"), t->l, t->refs ? t->refs : "", t->c, t->n, t->l);
+#if 0
+		printf(D("[%.*s]: c=%c, n=%d, l=%d\n"),
+			t->l,
+			t->refs
+				? t->refs->b
+				: "",
+			t->c, t->n, t->l);
+#endif
 		n = walk_trie(n);
-		if (!res || ((fn = f(n)) > fres)) {
+		if ((fn = f(n)) > fres) {
 			res = n;
 			fres = fn;
 		} /* if */

@@ -136,13 +136,15 @@ int main (int argc, char **argv)
 	int opt;
 	void (*process)(const char *) = process_line;
 	int i, mark;
+	int n_passes = 10;
 
-	while ((opt = getopt(argc, argv, "hfl")) != EOF) {
+	while ((opt = getopt(argc, argv, "hflp:")) != EOF) {
 		switch(opt) {
 		case 'h':
 		  do_usage(); exit(0);
 		case 'f': process = process_file; break;
 		case 'l': process = process_line; break;
+		case 'p': n_passes = atol(optarg); break;
 		} /* switch */
 	} /* while */
 
@@ -154,27 +156,51 @@ int main (int argc, char **argv)
 	} else	process(stdin_name);
 
 	mark = strings_n;
-	for(i = 0x80; i < 0x81; i++) {
+	for(i = 0x80; i < 0x80 + n_passes; i++) {
 		struct trie_node *root_trie, *max;
 		int j;
+		char *o;
 		struct ref_buff *ref;
 
 		printf(D("PASS #0x%02x:\n"), i);
 		assert(root_trie = new_trie());
 		for (j = 0; j < strings_n; j++) {
-			add_string(strings[j], root_trie, strings[j]);
+			char *s;
+			for (s = strings[j]; *s; s++)
+				add_string(s, root_trie, strings[j]);
 		} /* for */
 		max = walk_trie(root_trie);
 
-		if (max != root_trie) {
-			printf(D("  max: [%.*s], l=%d, n=%d\n"),
-				max->l, max->refs->b, max->l, max->n);
+		if (max == root_trie) break;
 
-			for (ref = max->refs; ref; ref = ref->nxt)
-				printf(D("    appears in [%s]\n"), ref->d);
-		}
+		printf(D("  max: [%.*s], l=%d, n=%d\n"),
+			max->l, max->refs->b, max->l, max->n);
 
+		/* copy the string macro */
+		o = strings[strings_n++] = malloc(max->l + 1);
+		memcpy(o, max->refs->b, max->l);
+		o += max->l;
+		*o++ = '\0';
+
+		/* substitute the strings */
+		for (ref = max->refs; ref; ref = ref->nxt) {
+			char *s = ref->b + max->l;
+			char *t = ref->b;
+			*t++ = i;
+			while (*s) *t++ = *s++;
+			*t++ = '\0';
+		} /* for */
+
+		/* delete the trie as it is no more needed */
 		del_trie(root_trie);
+	} /* for */
+
+	for (i = mark; i < strings_n; i++) {
+		printf(D("  macro[%d] = [%c%s]\n"), i - mark, 0x80+i-mark, strings[i]);
+	} /* for */
+
+	for(i = 0; i < mark; i++) {
+		printf(D("  string[%d] = [%s]\n"), i, strings[i]);
 	} /* for */
 
 } /* main */
