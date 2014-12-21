@@ -74,16 +74,22 @@ void process_line(const char *n)
 		exit(EXIT_FAILURE);
 	} /* if */
 
+#if DEBUG
 	printf(D("Processing [%s]: by lines BEGIN.\n"), n ? n : stdin_name);
+#endif
 
 	for (; (strings_n < N) && fgets(buffer, sizeof buffer, fin); strings_n++) {
 		buffer[strlen(buffer)-1] = '\0'; /* eliminate the last \n char. */
 		strings[strings_n] = strdup(buffer);
+#if DEBUG
 		printf(D("  line[%5d] = [%s]\n"), strings_n, strings[strings_n]);
+#endif
 	} /* while */
 
 	if (n) fclose(fin);
+#if DEBUG
 	printf(D("Processing [%s]: by lines END.\n"), n ? n : stdin_name);
+#endif
 } /* process_line */
 
 void process_file(const char *n)
@@ -100,7 +106,9 @@ void process_file(const char *n)
 		exit(EXIT_FAILURE);
 	} /* if */
 
+#if DEBUG
 	printf(D("Processing [%s]: in block BEGIN.\n"), n);
+#endif
 
 	for (; (strings_n < N)
 		&& ((rd = read(in, buffer, sizeof buffer - 1)) > 0);
@@ -119,7 +127,9 @@ void process_file(const char *n)
 	} /* if */
 
 	if (n) close(in);
+#if DEBUG
 	printf(D("Processing [%s]: in block END\n"), n);
+#endif
 } /* process_file */
 
 /**
@@ -136,7 +146,7 @@ int main (int argc, char **argv)
 	int opt;
 	void (*process)(const char *) = process_line;
 	int i, mark;
-	int n_passes = 10;
+	int n_passes = 64;
 
 	while ((opt = getopt(argc, argv, "hflp:")) != EOF) {
 		switch(opt) {
@@ -162,7 +172,9 @@ int main (int argc, char **argv)
 		char *o;
 		struct ref_buff *ref;
 
+#if DEBUG
 		printf(D("PASS #0x%02x:\n"), i);
+#endif
 		assert(root_trie = new_trie());
 		for (j = 0; j < strings_n; j++) {
 			char *s;
@@ -173,15 +185,15 @@ int main (int argc, char **argv)
 
 		if (max == root_trie) break;
 
+#if DEBUG
 		printf(D("  max: [%.*s], l=%d, n=%d\n"),
 			max->l, max->refs->b, max->l, max->n);
+#endif
 
 		/* copy the string macro */
 		o = strings[strings_n++] = malloc(max->l + 1);
 		memcpy(o, max->refs->b, max->l);
 		o += max->l;
-		*o++ = '\0';
-
 		/* substitute the strings */
 		for (ref = max->refs; ref; ref = ref->nxt) {
 			char *s = ref->b + max->l;
@@ -196,11 +208,23 @@ int main (int argc, char **argv)
 	} /* for */
 
 	for (i = mark; i < strings_n; i++) {
-		printf(D("  macro[%d] = [%c%s]\n"), i - mark, 0x80+i-mark, strings[i]);
+#if DEBUG
+		printf(D("  macro[0x%02x] = [%s]\n"), 0x80+i-mark, strings[i]);
+#else
+		printf("%s\n", strings[i]);
+#endif
 	} /* for */
 
+#if !DEBUG
+	puts("");
+#endif
+
 	for(i = 0; i < mark; i++) {
+#if DEBUG
 		printf(D("  string[%d] = [%s]\n"), i, strings[i]);
+#else
+		printf("%s\n", strings[i]);
+#endif
 	} /* for */
 
 } /* main */
