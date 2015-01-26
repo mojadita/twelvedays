@@ -166,6 +166,7 @@ int main (int argc, char **argv)
 	} else	process(stdin_name);
 
 	mark = strings_n;
+
 	for(i = 0x80; i < 0x80 + n_passes; i++) {
 		struct trie_node *root_trie, *max;
 		int j;

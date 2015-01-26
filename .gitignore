@@ -3,3 +3,6 @@ td
 trie
 *.o
 exp
+core
+freq
+twelve_days

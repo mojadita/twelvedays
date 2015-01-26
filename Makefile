@@ -3,7 +3,7 @@
 # Date: vie dic 12 19:19:35 EET 2014
 # Disclaimer: (C) 2014 LUIS COLORADO
 
-targets = ct td trie exp
+targets = ct td trie exp freq
 
 all: $(targets)
 clean:
@@ -28,3 +28,8 @@ exp_objs = exp.o
 exp_libs = 
 exp: $(exp_objs)
 	$(CC) $(LDFLAGS) -o $@ $(exp_objs) $(exp_libs)
+
+freq_objs = freq.o
+frea_libs =
+freq: $(freq_objs)
+	$(CC) $(LDFLAGS) -o $@ $(freq_objs) $(freq_libs)

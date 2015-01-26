@@ -132,7 +132,7 @@ void del_trie(struct trie_node *t)
 static int f(struct trie_node *n)
 {
 	return n
-		? (n->l - 1)*(n->n - 1) - 2
+		? (n->l - 2)*(n->n - 1) - 2
 		: -1;
 } /* f */
 
