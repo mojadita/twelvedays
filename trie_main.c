@@ -24,29 +24,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <stdarg.h>
 #include <avl.h>
 #include "trie.h"
+#include "deco.h"
 
 /* constants */
+#define MAX_PASSES	253
 
-#define MAX 65536
+#define FLAG_DEBUG	(1 << 0)
+#define FLAG_BINARY	(1 << 1)
+
+#define MAX (1<<24)
 #define N	512
+#define N_PER_ROW	16
+#define TYPE_BYTE	"UWord8"
+#define TYPE_INT	"UWord16"
 
-void process_line(const char *n);
 void process_file(const char *n);
 
 /* variables */
 
-char buffer[MAX]; /* buffer to store everything */
-char *p; /* pointer to free space in buffer */
-int bs; /* free space size */
+unsigned char buffer[MAX];	/* buffer to store everything */
+unsigned char *p;			/* pointer to free space in buffer */
+int bs = 0;					/* free space size */
 
-char *strings[N]; /* strings table for the macros/strings */
-int strings_n = 0; /* number of strings */
+char *strings[N];			/* strings table for the macros/strings */
+int strings_sz[N];			/* lengths of strings. */
+int strings_n = 0;			/* number of strings */
+int flags = 0;				/* option flags */
 
 struct trie_node *main_trie = NULL;
 
@@ -57,80 +65,85 @@ void do_usage(void)
 {
 } /* do_usage */
 
-/**
- * process a file reading its contents into a string.
- * @param n name of the file to open or NULL to read from stdin.
- */
-void process_line(const char *n)
-{
-	FILE *fin = (n != stdin_name)
-		? fopen(n, "r")
-		: stdin;
-
-	if (!fin) {
-		fprintf(stderr,
-			D("file %s: %s(errno=%d) fin=%p; stdin=%p\n"),
-			n, strerror(errno), errno, fin, stdin);
-		exit(EXIT_FAILURE);
-	} /* if */
-
-#if DEBUG
-	printf(D("Processing [%s]: by lines BEGIN.\n"), n ? n : stdin_name);
-#endif
-
-	for (; (strings_n < N) && fgets(buffer, sizeof buffer, fin); strings_n++) {
-		buffer[strlen(buffer)-1] = '\0'; /* eliminate the last \n char. */
-		strings[strings_n] = strdup(buffer);
-#if DEBUG
-		printf(D("  line[%5d] = [%s]\n"), strings_n, strings[strings_n]);
-#endif
-	} /* while */
-
-	if (n) fclose(fin);
-#if DEBUG
-	printf(D("Processing [%s]: by lines END.\n"), n ? n : stdin_name);
-#endif
-} /* process_line */
-
 void process_file(const char *n)
 {
-	int in = (n != stdin_name)
-		? open(n, O_RDONLY)
-		: 0; /* stdin */
-	int rd;
+	FILE *in = stdin;
+	int saved_bs = bs;
+	int c;
 
-	if (in < 0) {
-		fprintf(stderr,
-			D("file %s: %s(errno=%d)\n"),
-			n, strerror(errno), errno);
-		exit(EXIT_FAILURE);
+	if (n != stdin_name) {
+		in = fopen(n, "rb");
+		if (!in) {
+			fprintf(stderr,
+				D("%s: %s (errno = %d)\n"),
+				n, strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		} /* if */
 	} /* if */
 
 #if DEBUG
-	printf(D("Processing [%s]: in block BEGIN.\n"), n);
+	fprintf(stderr,
+		D("Processing [%s]: BEGIN.\n"),
+		n);
 #endif
 
-	for (; (strings_n < N)
-		&& ((rd = read(in, buffer, sizeof buffer - 1)) > 0);
-		strings_n++)
-	{
-		buffer[rd] = 0;
-		strings[strings_n] = strdup(buffer);
-		printf(D("  string[%5d] = [%s]\n"), strings_n, strings[strings_n]);
+	strings[strings_n] = buffer + bs;
+	while((c = fgetc(in)) != EOF) {
+		buffer[bs++] = c;
+		if(c == ESCAPE) {
+			buffer[bs++] = ESCOUT;
+		} /* if */
 	} /* while */
 
-	if (rd < 0) {
-		fprintf(stderr,
-			D("read %s: %s(errno=%d)\n"),
-			n, strerror(errno), errno);
-		exit(EXIT_FAILURE);
-	} /* if */
+	strings_sz[strings_n] = bs - saved_bs;
+	strings_n++;
 
-	if (n) close(in);
+	if (n != stdin_name) fclose(in);
+
 #if DEBUG
-	printf(D("Processing [%s]: in block END\n"), n);
+	printf(stderr,
+		D("Processing [%s]: END\n"),
+		n);
 #endif
 } /* process_file */
+
+int vprint_out(FILE *f,
+	const unsigned char *buffer,
+	int buffer_sz,
+	const char *fmt,
+	va_list p)
+{
+	int res = 0;
+	int i;
+	res += vfprintf(f, fmt, p);
+	for (i = 0; i < buffer_sz; i++) {
+		if (!(i % N_PER_ROW)) {
+			res += fprintf(f,
+				"\n    /* %4d */ ",
+				i);
+		} /* if */
+		res += fprintf(f, "0x%02x,", buffer[i]);
+	} /* for */
+	res += fprintf(f, "\n");
+	return res;
+} /* print_out */
+
+int print_out(FILE *f,
+	const unsigned char *buffer,
+	int buffer_sz,
+	const char *fmt,
+	...)
+{
+	va_list p;
+	int res;
+
+	va_start(p, fmt);
+	res = vprint_out(f, buffer, buffer_sz, fmt, p);
+	va_end(p);
+
+	return res;
+} /* print_out */
+
 
 /**
  * main program.  Processes all files and returns one string
@@ -144,17 +157,19 @@ int main (int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	int opt;
-	void (*process)(const char *) = process_line;
 	int i, mark;
-	int n_passes = 64;
+	int n_passes = MAX_PASSES;
+	static const char eol[] = { ESCAPE, EOS };
+	static const int eol_sz = sizeof eol;
+	FILE *out = stdout;
 
-	while ((opt = getopt(argc, argv, "hflp:")) != EOF) {
+	while ((opt = getopt(argc, argv, "bdhp:o:")) != EOF) {
 		switch(opt) {
-		case 'h':
-		  do_usage(); exit(0);
-		case 'f': process = process_file; break;
-		case 'l': process = process_line; break;
+		case 'h': do_usage(); exit(0);
 		case 'p': n_passes = atol(optarg); break;
+		case 'd': flags |= FLAG_DEBUG; break;
+		case 'b': flags |= FLAG_BINARY; break;
+		case 'o': out = fopen(optarg, "wb"); break;
 		} /* switch */
 	} /* while */
 
@@ -162,71 +177,166 @@ int main (int argc, char **argv)
 
 	if (argc) {
 		for (i = 0; i < argc; i++)
-			process(argv[i]);
-	} else	process(stdin_name);
+			process_file(argv[i]);
+	} else	process_file(stdin_name);
 
 	mark = strings_n;
 
-	for(i = 0x80; i < 0x80 + n_passes; i++) {
+	for(i = 0; i < n_passes; i++) {
 		struct trie_node *root_trie, *max;
 		int j;
 		char *o;
 		struct ref_buff *ref;
 
-#if DEBUG
-		printf(D("PASS #0x%02x:\n"), i);
-#endif
+		if (flags & FLAG_DEBUG) {
+			fprintf(stderr,
+				D("PASS #%d:\n"),
+				i);
+		} /* if */
+
+		/* INITIALIZE THE TRIE */
 		assert(root_trie = new_trie());
 		for (j = 0; j < strings_n; j++) {
 			char *s;
-			for (s = strings[j]; *s; s++)
-				add_string(s, root_trie, strings[j]);
+			int l;
+			static char *progress[] = {
+				"\\", "|", "/", "-",
+			};
+			for (s = strings[j], l = strings_sz[j]; l; s++, l--) {
+				add_string(s, l, root_trie, j);
+			} /* for */
+			fprintf(stderr,
+				"\b%s",
+				progress[j % (sizeof progress/sizeof progress[0])]);
 		} /* for */
+
+		/* SEARCH FOR THE MOST EFFICIENT MACRO SUBSTITUTION */
 		max = walk_trie(root_trie);
 
+		/* IF NOT FOUND, FINISH */
 		if (max == root_trie) break;
 
-#if DEBUG
-		printf(D("  max: [%.*s], l=%d, n=%d\n"),
-			max->l, max->refs->b, max->l, max->n);
-#endif
+		if (flags & FLAG_DEBUG) {
+			/* WRITE THE MACRO FOUND */
+			fprintbuf(stderr,
+				max->l, max->refs->b,
+				D("len=%d, nrep=%d"),
+				max->l, max->n);
+		} /* if */
 
-		/* copy the string macro */
-		o = strings[strings_n++] = malloc(max->l + 1);
-		memcpy(o, max->refs->b, max->l);
-		o += max->l;
-		/* substitute the strings */
+		/* copy the string macro as a new string. */
+		strings[strings_n] = buffer + bs;
+		memcpy(strings[strings_n], max->refs->b, max->l);
+		bs += max->l;
+		strings_sz[strings_n] = max->l;
+		strings_n++;
+
+		/* substitute the strings as macro calls */
 		for (ref = max->refs; ref; ref = ref->nxt) {
-			char *s = ref->b + max->l;
-			char *t = ref->b;
-			*t++ = i;
-			while (*s) *t++ = *s++;
-			*t++ = '\0';
+			char *src = ref->b + max->l;
+			char *tgt = ref->b;
+			int ix = ref->ix;
+			int n = strings_sz[ix] - (src - strings[ix]);
+			strings_sz[ix] -= max->l - MACRO_SIZE;
+			*tgt++ = ESCAPE;
+			*tgt++ = i;
+			while (n--) *tgt++ = *src++;
 		} /* for */
 
 		/* delete the trie as it is no more needed */
 		del_trie(root_trie);
 	} /* for */
 
+	/* PRINT THE MACROS */
+	if (!(flags & FLAG_BINARY)) {
+		fprintf(out,
+			"const " TYPE_INT " macros_n = %d;\n"
+			"const " TYPE_INT " macros_sz[] = {",
+			strings_n - mark);
+		for (i = mark; i < strings_n; i++) {
+			if ((i - mark) % N_PER_ROW == 0)
+				fprintf(out, "\n    /* %6d */ ",
+					i - mark);
+			fprintf(out, "%d, ", strings_sz[i]);
+		} /* for */
+		fprintf(out,
+			"\n};\n\n"
+			"const " TYPE_BYTE " macros[] = {");
+	} /* if */
+
 	for (i = mark; i < strings_n; i++) {
-#if DEBUG
-		printf(D("  macro[0x%02x] = [%s]\n"), 0x80+i-mark, strings[i]);
-#else
-		printf("%s\n", strings[i]);
-#endif
+		if (flags & FLAG_DEBUG) {
+			fprintbuf(stderr,
+				strings_sz[i],
+				strings[i],
+				D("macros[0x%02x, 0x%02x] ="),
+				ESCAPE, i-mark);
+		} /* if */
+		if (flags & FLAG_BINARY) {
+			fwrite(
+				strings[i],
+				strings_sz[i],
+				sizeof(char),
+				out);
+			fwrite(eol, eol_sz, sizeof(char), out);
+		} else {
+			print_out(out,
+				strings[i],
+				strings_sz[i],
+				"\n    /* macro #%d */", i - mark);
+		} /* if */
 	} /* for */
 
-#if !DEBUG
-	puts("");
-#endif
+	if (flags & FLAG_BINARY) {
+		fwrite(eol, eol_sz, sizeof(char), out);
+	} else {
+		fprintf(out,
+			"\n};\n\n");
+	} /* if */
+
 
 	for(i = 0; i < mark; i++) {
-#if DEBUG
-		printf(D("  string[%d] = [%s]\n"), i, strings[i]);
-#else
-		printf("%s\n", strings[i]);
-#endif
+		if (flags & FLAG_DEBUG) {
+			fprintbuf(stderr,
+				strings_sz[i],
+				strings[i],
+				D("strings[%d] ="), i);
+		} /* if */
+
+		if (flags & FLAG_BINARY) {
+			if (i) fwrite(eol, eol_sz, sizeof(char), out);
+			fwrite(
+				strings[i],
+				strings_sz[i],
+				sizeof(char),
+				out);
+		} else {
+			fprintf(out,
+				"const " TYPE_INT " strings_n = %d;\n"
+				"const " TYPE_INT " strings_sz[] = {",
+				mark);
+			for (i = 0; i < mark; i++) {
+				if (i % N_PER_ROW == 0)
+					fprintf(out, "\n    /* %6d */ ", i);
+				fprintf(out, "%d, ", strings_sz[i]);
+			} /* for */
+			fprintf(out,
+				"\n};\n\n"
+				"const " TYPE_BYTE " strings[] = {");
+			for (i = 0; i < mark; i++) {
+				print_out(out,
+					strings[i],
+					strings_sz[i],
+					"\n    /* string #%d */", i);
+			} /* for */
+			fprintf(out,
+				"\n};\n\n");
+		} /* if */
 	} /* for */
+
+	if (out != stdout) fclose(out);
+
+	return EXIT_SUCCESS;
 
 } /* main */
 

@@ -29,10 +29,11 @@
 #include <assert.h>
 #include <avl.h>
 #include "trie.h"
+#include "deco.h"
 
 /* functions */
 static struct trie_node *new_node(struct trie_node *prt, const char c);
-static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *d);
+static struct ref_buff *add_ref(struct trie_node *n, char *b, int ix);
 
 struct trie_node *new_trie(void)
 {
@@ -57,7 +58,7 @@ static struct trie_node *new_node(struct trie_node *prt, const char c)
 	return res;
 } /* new_node */
 
-static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *d)
+static struct ref_buff *add_ref(struct trie_node *n, char *b, int ix)
 {
 	struct ref_buff *res;
 
@@ -65,7 +66,7 @@ static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *
 
 	res->b = b; /* buffer pointer, length is in trie node. */
 	res->nxt = n->refs; /* stack insert */
-	res->d = d;
+	res->ix = ix;
 	n->refs = res;
 	n->n++; /* increment the number of references */
 
@@ -75,13 +76,16 @@ static struct ref_buff *add_ref(struct trie_node *n, const char *b, const void *
 /**
  * this function adds a string to the trie, beginning at pos t.
  * @param s is the string to add.
+ * @param l length of the string to add.
  * @param t is the trie node to add this string to.
+ * @param data is the user data to add to the reference (normally
+ *		the index of the string where this reference belongs)
  */
-struct trie_node *add_string(const char *s, struct trie_node *t, const void *data)
+struct trie_node *add_string(char *s, int l, struct trie_node *t, int data)
 {
-	const char *saved_s = s; 
+	char *saved_s; 
 
-	for (;*s;s++) {
+	for (saved_s = s; l; l--, s++) {
 		/* search the new character in the trie */
 		struct trie_node *n = avl_tree_get(t->sub, (void *)*s);
 
@@ -122,17 +126,17 @@ void del_trie(struct trie_node *t)
  * number of characters saved by using this node as a macro.
  * the number of characters saved is the length of this macro (n->l)
  * by the number of times it appears in the code (n->n) minus
- * one character per each time it appears (-n->n) minus the
- * table entry (-n->l - 1) (one char to identify the macro used)
- * so, in total we have (n->l)*(n->n) -(n->n) -(n->l) - 1 ==
- * (n->l - 1)*(n->n - 1) - 2.
+ * MACRO_SIZE characters per each time it appears (-n->n) minus the
+ * table entry (-n->l - MACRO_SIZE) (one char to identify the macro used)
+ * so, in total we have 
+ * (n->l - MACRO_SIZE)*(n->n - 1) - MACRO_SIZE.
  * @param n node to calculate f for.
  * @return the value calculated as above.
  */
 static int f(struct trie_node *n)
 {
 	return n
-		? (n->l - 2)*(n->n - 1) - 2
+		? (n->l - MACRO_SIZE)*(n->n - 1) - MACRO_SIZE
 		: -1;
 } /* f */
 
@@ -162,7 +166,7 @@ struct trie_node *walk_trie(struct trie_node *t)
 			t->c, t->n, t->l);
 #endif
 		n = walk_trie(n);
-		if ((fn = f(n)) > fres) {
+		if ((fn = f(n)) > fres && (n->c != ESCAPE)) {
 			res = n;
 			fres = fn;
 		} /* if */

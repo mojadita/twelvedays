@@ -31,15 +31,17 @@ static char TRIE_H_RCSId[] = "\n$Id: header.h.m4,v 1.7 2005/11/07 19:39:53 luis 
 #define D(X) __FILE__":%d:%s:" X, __LINE__, __func__
 #endif
 
+#define MACRO_SIZE	2
+
 /* types */
 
 /* ref_buff form a stack of references into the text where we have
  * found this substring. If this reference doesn't overlapp with the
  * previous one, we push it onto the stack making it the last one. */
 struct ref_buff {
-	char *b;
+	const char *b;
 	struct ref_buff *nxt;
-	const void *d;
+	int ix;
 }; /* ref_buff */
 
 struct trie_node {
@@ -53,7 +55,7 @@ struct trie_node {
 
 /* prototypes */
 struct trie_node *new_trie(void);
-struct trie_node *add_string(const char *s, struct trie_node *t, const void *d);
+struct trie_node *add_string(char *s, int l, struct trie_node *t, int d);
 struct trie_node *walk_trie(struct trie_node *t);
 void del_trie(struct trie_node *t);
 
