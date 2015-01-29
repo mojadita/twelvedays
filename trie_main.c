@@ -107,43 +107,26 @@ void process_file(const char *n)
 #endif
 } /* process_file */
 
-int vprint_out(FILE *f,
-	const unsigned char *buffer,
-	int buffer_sz,
-	const char *fmt,
-	va_list p)
-{
-	int res = 0;
-	int i;
-	res += vfprintf(f, fmt, p);
-	for (i = 0; i < buffer_sz; i++) {
-		if (!(i % N_PER_ROW)) {
-			res += fprintf(f,
-				"\n    /* %4d */ ",
-				i);
-		} /* if */
-		res += fprintf(f, "0x%02x,", buffer[i]);
-	} /* for */
-	res += fprintf(f, "\n");
-	return res;
-} /* print_out */
+#define PRINTOUT(X) \
+	int fprint_out_##X( \
+		FILE *f, \
+		const unsigned X *buffer, \
+		int buffer_sz) \
+	{ \
+		int res = 0; \
+		int i; \
+		for (i = 0; i < buffer_sz; i++) { \
+			if (!(i % N_PER_ROW)) { \
+				res += fprintf(f, "\n    /* %6d */ ", i); \
+			} /* if */ \
+			res += fprintf(f, "0x%02x,", buffer[i]); \
+		} /* for */ \
+		res += fprintf(f, "\n"); \
+		return res; \
+	}
 
-int print_out(FILE *f,
-	const unsigned char *buffer,
-	int buffer_sz,
-	const char *fmt,
-	...)
-{
-	va_list p;
-	int res;
-
-	va_start(p, fmt);
-	res = vprint_out(f, buffer, buffer_sz, fmt, p);
-	va_end(p);
-
-	return res;
-} /* print_out */
-
+PRINTOUT(char) /* fprint_out_char() */
+PRINTOUT(int) /* fprint_out_int() */
 
 /**
  * main program.  Processes all files and returns one string
@@ -159,16 +142,13 @@ int main (int argc, char **argv)
 	int opt;
 	int i, mark;
 	int n_passes = MAX_PASSES;
-	static const char eol[] = { ESCAPE, EOS };
-	static const int eol_sz = sizeof eol;
 	FILE *out = stdout;
 
-	while ((opt = getopt(argc, argv, "bdhp:o:")) != EOF) {
+	while ((opt = getopt(argc, argv, "dhp:o:")) != EOF) {
 		switch(opt) {
 		case 'h': do_usage(); exit(0);
 		case 'p': n_passes = atol(optarg); break;
 		case 'd': flags |= FLAG_DEBUG; break;
-		case 'b': flags |= FLAG_BINARY; break;
 		case 'o': out = fopen(optarg, "wb"); break;
 		} /* switch */
 	} /* while */
@@ -182,6 +162,19 @@ int main (int argc, char **argv)
 
 	mark = strings_n;
 
+	/* print the strings */
+	{	int i;
+		for (i = 0; i < strings_n; i++) {
+			if (i == mark)
+				printf("MARK\n");
+			fprintbuf(stderr,
+				strings_sz[i],
+				strings[i],
+				"strings[%d], len=%d",
+				i, strings_sz[i]);
+		} /* for */
+	} /* block */
+
 	for(i = 0; i < n_passes; i++) {
 		struct trie_node *root_trie, *max;
 		int j;
@@ -189,9 +182,7 @@ int main (int argc, char **argv)
 		struct ref_buff *ref;
 
 		if (flags & FLAG_DEBUG) {
-			fprintf(stderr,
-				D("PASS #%d:\n"),
-				i);
+			fprintf(stderr, D("PASS #%d:\n"), i);
 		} /* if */
 
 		/* INITIALIZE THE TRIE */
@@ -205,9 +196,7 @@ int main (int argc, char **argv)
 			for (s = strings[j], l = strings_sz[j]; l; s++, l--) {
 				add_string(s, l, root_trie, j);
 			} /* for */
-			fprintf(stderr,
-				"\b%s",
-				progress[j % (sizeof progress/sizeof progress[0])]);
+			fprintf(stderr, "\b%s", progress[j % 4]);
 		} /* for */
 
 		/* SEARCH FOR THE MOST EFFICIENT MACRO SUBSTITUTION */
@@ -233,18 +222,42 @@ int main (int argc, char **argv)
 
 		/* substitute the strings as macro calls */
 		for (ref = max->refs; ref; ref = ref->nxt) {
-			char *src = ref->b + max->l;
-			char *tgt = ref->b;
+			const char *src = ref->b + max->l;
+			char *tgt = (char *)ref->b;
 			int ix = ref->ix;
 			int n = strings_sz[ix] - (src - strings[ix]);
 			strings_sz[ix] -= max->l - MACRO_SIZE;
 			*tgt++ = ESCAPE;
 			*tgt++ = i;
+			if (n < 0) {
+				fprintbuf(stderr,
+					strings_sz[ix],
+					strings[ix],
+					"strings[%d]: pos=0x%x, len=%d->0x%x, n=%d",
+					ix,
+					tgt - strings[ix],
+					max->l,
+					(tgt - strings[ix]) + max->l,
+					n);
+				fflush(stderr);
+				continue;
+				abort();
+			} /* if */
 			while (n--) *tgt++ = *src++;
 		} /* for */
 
 		/* delete the trie as it is no more needed */
 		del_trie(root_trie);
+		/* print the strings */
+		{	int i;
+			for (i = 0; i < strings_n; i++) {
+				fprintbuf(stderr,
+					strings_sz[i],
+					strings[i],
+					"strings[%d], len=%d",
+					i, strings_sz[i]);
+			} /* for */
+		} /* block */
 	} /* for */
 
 	/* PRINT THE MACROS */
@@ -253,85 +266,44 @@ int main (int argc, char **argv)
 			"const " TYPE_INT " macros_n = %d;\n"
 			"const " TYPE_INT " macros_sz[] = {",
 			strings_n - mark);
-		for (i = mark; i < strings_n; i++) {
-			if ((i - mark) % N_PER_ROW == 0)
-				fprintf(out, "\n    /* %6d */ ",
-					i - mark);
-			fprintf(out, "%d, ", strings_sz[i]);
-		} /* for */
+		fprint_out_int(out,
+			strings_sz + mark,
+			strings_n - mark);
 		fprintf(out,
-			"\n};\n\n"
+			"\n}; /* macros_sz */\n\n"
 			"const " TYPE_BYTE " macros[] = {");
 	} /* if */
 
 	for (i = mark; i < strings_n; i++) {
 		if (flags & FLAG_DEBUG) {
-			fprintbuf(stderr,
-				strings_sz[i],
-				strings[i],
+			fprintbuf(stderr, strings_sz[i], strings[i],
 				D("macros[0x%02x, 0x%02x] ="),
 				ESCAPE, i-mark);
 		} /* if */
-		if (flags & FLAG_BINARY) {
-			fwrite(
-				strings[i],
-				strings_sz[i],
-				sizeof(char),
-				out);
-			fwrite(eol, eol_sz, sizeof(char), out);
-		} else {
-			print_out(out,
-				strings[i],
-				strings_sz[i],
-				"\n    /* macro #%d */", i - mark);
-		} /* if */
+		fprintf(out, "\n    /* macro #%d */", i - mark);
+		fprint_out_char(out, strings[i], strings_sz[i]);
 	} /* for */
 
-	if (flags & FLAG_BINARY) {
-		fwrite(eol, eol_sz, sizeof(char), out);
-	} else {
-		fprintf(out,
-			"\n};\n\n");
-	} /* if */
-
+	fprintf(out,
+		"\n}; /* macros */\n"
+		"\n"
+		"const " TYPE_INT " strings_n = %d;\n"
+		"const " TYPE_INT " strings_sz [] = {",
+		mark);
+	fprint_out_int(out, strings_sz, mark);
+	fprintf(out,
+		"\n}; /* strings_sz */\n"
+		"const " TYPE_BYTE " strings [] = {");
 
 	for(i = 0; i < mark; i++) {
 		if (flags & FLAG_DEBUG) {
-			fprintbuf(stderr,
-				strings_sz[i],
-				strings[i],
+			fprintbuf(stderr, strings_sz[i], strings[i],
 				D("strings[%d] ="), i);
 		} /* if */
 
-		if (flags & FLAG_BINARY) {
-			if (i) fwrite(eol, eol_sz, sizeof(char), out);
-			fwrite(
-				strings[i],
-				strings_sz[i],
-				sizeof(char),
-				out);
-		} else {
-			fprintf(out,
-				"const " TYPE_INT " strings_n = %d;\n"
-				"const " TYPE_INT " strings_sz[] = {",
-				mark);
-			for (i = 0; i < mark; i++) {
-				if (i % N_PER_ROW == 0)
-					fprintf(out, "\n    /* %6d */ ", i);
-				fprintf(out, "%d, ", strings_sz[i]);
-			} /* for */
-			fprintf(out,
-				"\n};\n\n"
-				"const " TYPE_BYTE " strings[] = {");
-			for (i = 0; i < mark; i++) {
-				print_out(out,
-					strings[i],
-					strings_sz[i],
-					"\n    /* string #%d */", i);
-			} /* for */
-			fprintf(out,
-				"\n};\n\n");
-		} /* if */
+		fprintf(out, "\n    /* string #%d */", i);
+		fprint_out_char(out, strings[i], strings_sz[i]);
+		fprintf(out, "\n}; /* strings */\n\n");
 	} /* for */
 
 	if (out != stdout) fclose(out);

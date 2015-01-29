@@ -31,7 +31,8 @@ static char TRIE_H_RCSId[] = "\n$Id: header.h.m4,v 1.7 2005/11/07 19:39:53 luis 
 #define D(X) __FILE__":%d:%s:" X, __LINE__, __func__
 #endif
 
-#define MACRO_SIZE	2
+#define MACRO_SIZE		2
+#define IS_ESCAPE_SEQ	(1 << 8)
 
 /* types */
 
@@ -45,7 +46,7 @@ struct ref_buff {
 }; /* ref_buff */
 
 struct trie_node {
-	char				c; /* the character encoded in this node */
+	int					c; /* the character encoded in this node */
 	int					n; /* number of times this string repeats */
 	int					l; /* length of this string. */
 	struct trie_node	*prt; /* parent of this trie node. */

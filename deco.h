@@ -28,8 +28,7 @@ extern "C" {
 
 /* constants */
 #define ESCAPE		139
-#define EOS			255
-#define ESCOUT		254
+#define ESCOUT		255
 
 /* types */
 

@@ -32,7 +32,7 @@
 #include "deco.h"
 
 /* functions */
-static struct trie_node *new_node(struct trie_node *prt, const char c);
+static struct trie_node *new_node(struct trie_node *prt, const int c);
 static struct ref_buff *add_ref(struct trie_node *n, char *b, int ix);
 
 struct trie_node *new_trie(void)
@@ -41,7 +41,7 @@ struct trie_node *new_trie(void)
 } /* new_trie */
 
 /* constructor */
-static struct trie_node *new_node(struct trie_node *prt, const char c)
+static struct trie_node *new_node(struct trie_node *prt, const int c)
 {
 	struct trie_node *res;
 
@@ -49,7 +49,7 @@ static struct trie_node *new_node(struct trie_node *prt, const char c)
 
 	res->c = c;
 	res->n = 0; /* it will be incremented when a reference is attached to it. */
-	res->l = prt ? prt->l + 1 : 0;
+	res->l = prt ? prt->l + (c & IS_ESCAPE_SEQ ? MACRO_SIZE : 1) : 0;
 	res->prt = prt; /* previous node in the trie. */
 	res->sub = new_avl_tree(NULL, NULL, NULL, NULL);
 	res->refs = NULL;
@@ -86,11 +86,21 @@ struct trie_node *add_string(char *s, int l, struct trie_node *t, int data)
 	char *saved_s; 
 
 	for (saved_s = s; l; l--, s++) {
+		struct trie_node *n;
+		int c = 0;
+
+		if (*s == ESCAPE) {
+			c |= IS_ESCAPE_SEQ;
+			s++; l--;
+			assert(l > 0);
+		}
+		c |= *s;
+
 		/* search the new character in the trie */
-		struct trie_node *n = avl_tree_get(t->sub, (void *)*s);
+		n = avl_tree_get(t->sub, (void *)c);
 
 		if (!n) { /* not found */
-			n = new_node(t, *s); /* add it */
+			n = new_node(t, c); /* add it */
 		} /* if */
 
 		/* add the reference only if it doesn't overlap the previous */
@@ -166,7 +176,7 @@ struct trie_node *walk_trie(struct trie_node *t)
 			t->c, t->n, t->l);
 #endif
 		n = walk_trie(n);
-		if ((fn = f(n)) > fres && (n->c != ESCAPE)) {
+		if ((fn = f(n)) > fres) {
 			res = n;
 			fres = fn;
 		} /* if */
