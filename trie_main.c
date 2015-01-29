@@ -43,6 +43,8 @@
 #define TYPE_BYTE	"UWord8"
 #define TYPE_INT	"UWord16"
 
+static const unsigned int MAX_STR_LEN = (1 << 14);
+
 void process_file(const char *n);
 
 /* variables */
@@ -70,6 +72,7 @@ void process_file(const char *n)
 	FILE *in = stdin;
 	int saved_bs = bs;
 	int c;
+	unsigned int char_count = 0;
 
 	if (n != stdin_name) {
 		in = fopen(n, "rb");
@@ -90,9 +93,19 @@ void process_file(const char *n)
 	strings[strings_n] = buffer + bs;
 	while((c = fgetc(in)) != EOF) {
 		buffer[bs++] = c;
+		++char_count;
 		if(c == ESCAPE) {
 			buffer[bs++] = ESCOUT;
+			++char_count;
 		} /* if */
+
+		if (char_count >= MAX_STR_LEN) {
+		    strings[strings_n] = buffer + bs;
+		    strings_sz[strings_n] = bs - saved_bs;
+		    saved_bs = bs;
+		    ++strings_n;
+		    char_count -= MAX_STR_LEN;
+		}
 	} /* while */
 
 	strings_sz[strings_n] = bs - saved_bs;

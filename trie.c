@@ -135,9 +135,11 @@ void del_trie(struct trie_node *t)
  */
 static int f(struct trie_node *n)
 {
-	return n
-		? (n->l - MACRO_SIZE)*(n->n - 1) - MACRO_SIZE
-		: -1;
+    if (n && (n->c != (char)ESCAPE)) {
+        return (n->l - MACRO_SIZE)*(n->n - 1) - MACRO_SIZE;
+    } else {
+        return -1;
+    }
 } /* f */
 
 /**
