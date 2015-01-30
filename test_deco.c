@@ -42,10 +42,12 @@ static char TEST_DECO_C_RCSId[]="\n$Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis
 
 int main()
 {
-	char buffer[65536];
-	int res;
-	res = deco_string(buffer);
-	write(1, buffer, res);
+    char buffer[1<<20]; /* 1Mb */
+    int res;
+
+    res = deco_string(buffer);
+    write(1, buffer, res);
+
 }
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */

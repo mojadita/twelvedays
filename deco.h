@@ -27,8 +27,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* constants */
-#define ESCAPE		139
-#define ESCOUT		255
+#define ESCAPE      139
+#define ESCOUT      255
 
 /* types */
 

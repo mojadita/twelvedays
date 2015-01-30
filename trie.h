@@ -24,41 +24,48 @@
 #ifndef TRIE_H
 #define TRIE_H
 
-static char TRIE_H_RCSId[] = "\n$Id: header.h.m4,v 1.7 2005/11/07 19:39:53 luis Exp $\n";
-
 /* constants */
 #ifndef D
 #define D(X) __FILE__":%d:%s:" X, __LINE__, __func__
 #endif
 
-#define MACRO_SIZE		2
-#define IS_ESCAPE_SEQ	(1 << 8)
+#define MACRO_SIZE      2
+#define IS_ESCAPE_SEQ   (1 << 8)
 
 /* types */
+
+typedef unsigned char   byte;
+typedef unsigned short  word;
 
 /* ref_buff form a stack of references into the text where we have
  * found this substring. If this reference doesn't overlapp with the
  * previous one, we push it onto the stack making it the last one. */
 struct ref_buff {
-	const char *b;
-	struct ref_buff *nxt;
-	int ix;
+    const byte *b;
+    struct ref_buff *nxt;
+    int ix;
 }; /* ref_buff */
 
 struct trie_node {
-	int					c; /* the character encoded in this node */
-	int					n; /* number of times this string repeats */
-	int					l; /* length of this string. */
-	struct trie_node	*prt; /* parent of this trie node. */
-	AVL_TREE			sub; /* avl tree to subnodes of this trie */
-	struct ref_buff		*refs; /* stack of references. */
+    word                c; /* the character encoded in this node */
+    int                 n; /* number of times this string repeats */
+    int                 l; /* length of this string. */
+    struct trie_node    *prt; /* parent of this trie node. */
+    AVL_TREE            sub; /* avl tree to subnodes of this trie */
+    struct ref_buff     *refs; /* stack of references. */
 }; /* trie_node */
 
 /* prototypes */
 struct trie_node *new_trie(void);
-struct trie_node *add_string(char *s, int l, struct trie_node *t, int d);
-struct trie_node *walk_trie(struct trie_node *t);
-void del_trie(struct trie_node *t);
+struct trie_node *add_string(
+        const byte *string,
+        int len,
+        struct trie_node *trie,
+        int ix_string);
+struct trie_node *walk_trie(
+        const struct trie_node *trie,
+        int (*weight_func)(const struct trie_node *));
+void del_trie(struct trie_node *trie);
 
 #endif /* TRIE_H */
 /* Do not include anything AFTER the line above, as it would not be

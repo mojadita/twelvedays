@@ -21,6 +21,7 @@
 /* Standard include files */
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "deco.h"
 
@@ -35,62 +36,56 @@ const UWord8 **the_macros = NULL;
 
 int deco_macro(const UWord8 *in, UWord16 len, UWord8 *out)
 {
-	int res = 0;
+    int res = 0;
 
-	for (; len > 0; len--, in++) {
-		if (*in == ESCAPE) {
-			len--; in++;
-			/* SPECIAL CASE OF A MACRO
-			 * THAT ENDS IN ESCAPE */
-			if (len == 0) {
-				*out++ = ESCAPE;
-				res++;
-				break;
-			} /* if */
-			if (*in == ESCOUT) {
-				*out++ = ESCAPE; res++;
-			} else {
-				register int n = deco_macro(
-						the_macros[*in],
-						macros_sz[*in],
-					    out);
-				out += n; res += n;
-			} /* if */
-		} else {
-			*out++ = *in;
-			res++;
-		} /* if */
-	} /* for */
+    for (; len > 0; len--, in++) {
+        if (*in == ESCAPE) {
+            len--; in++;
+            assert(len > 0);
+            if (*in == ESCOUT) {
+                *out++ = ESCAPE; res++;
+            } else {
+                register int n = deco_macro(
+                        the_macros[*in],
+                        macros_sz[*in],
+                        out);
+                out += n; res += n;
+            } /* if */
+        } else {
+            *out++ = *in;
+            res++;
+        } /* if */
+    } /* for */
 
-	return res;
+    return res;
 } /* deco_macro */
 
 int deco_string(UWord8 *out)
 {
-	auto int i, res = 0;
+    int i, res = 0;
 
-	/* INITIALIZATION */
-	if (!the_strings) {
-		the_strings = malloc(strings_n * sizeof(UWord8 *));
-		for (i = 0; i < strings_n; i++) {
-			the_strings[i] = i ? the_strings[i-1] + strings_sz[i-1] : strings;
-		} /* for */
-	} /* if */
-	if (!the_macros) {
-		the_macros = malloc(macros_n * sizeof(UWord8 *));
-		for (i = 0; i < macros_n; i++) {
-			the_macros[i] = i ? the_macros[i-1] + macros_sz[i-1] : macros;
-		} /* for */
-	} /* if */
+    /* INITIALIZATION */
+    if (!the_strings) {
+        the_strings = calloc(strings_n, sizeof(UWord8 *));
+        for (i = 0; i < strings_n; i++) {
+            the_strings[i] = i ? the_strings[i-1] + strings_sz[i-1] : strings;
+        } /* for */
+    } /* if */
+    if (!the_macros) {
+        the_macros = calloc(macros_n, sizeof(UWord8 *));
+        for (i = 0; i < macros_n; i++) {
+            the_macros[i] = i ? the_macros[i-1] + macros_sz[i-1] : macros;
+        } /* for */
+    } /* if */
 
-	/* PROCESSING */
-	for (i = 0; i < strings_n; i++) {
-		register int n;
-		n = deco_macro(the_strings[i], strings_sz[i], out);
-		res += n; out += n;
-	} /* for */
+    /* PROCESSING */
+    for (i = 0; i < strings_n; i++) {
+        register int n;
+        n = deco_macro(the_strings[i], strings_sz[i], out);
+        res += n; out += n;
+    } /* for */
 
-	return res;
+    return res;
 } /* deco */
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */
