@@ -34,7 +34,7 @@ frea_libs =
 freq: $(freq_objs)
 	$(CC) $(LDFLAGS) -o $@ $(freq_objs) $(freq_libs)
 
-test_deco_objs = test_deco.c deco.c
+test_deco_objs = test_deco.o deco.o
 test_deco_libs = 
 test_deco: $(test_deco_objs)
 	$(CC) $(LDFLAGS) -o $@ $(test_deco_objs) $(test_deco_libs)

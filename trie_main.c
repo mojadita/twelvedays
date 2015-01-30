@@ -40,8 +40,8 @@
 #define MAX (1<<24)
 #define N   512
 #define N_PER_ROW   16
-#define TYPE_BYTE   "UWord8"
-#define TYPE_INT    "UWord16"
+#define TYPE_BYTE   "const UWord8"
+#define TYPE_INT    "const UWord16"
 
 static void process_file(const char *n);
 
@@ -56,6 +56,7 @@ static int strings_sz[N];           /* lengths of strings. */
 static int strings_n = 0;           /* number of strings */
 static int mark = 0;
 static int flags = 0;               /* option flags */
+static int chunk_size = 0;
 
 static struct trie_node *main_trie = NULL;
 
@@ -291,14 +292,15 @@ int main (int argc, char **argv)
             print_strings();
     } /* for */
 
+    /* PRINT OUTPUT */
     fprintf(out,
-        "const " TYPE_INT " macros_n = %d;\n"
-        "const " TYPE_INT " macros_sz[] = {",
+        TYPE_INT " macros_n = %d;\n"
+        TYPE_INT " macros_sz[] = {",
         strings_n - mark);
     fprint_out_int(out, strings_sz + mark, strings_n - mark);
     fprintf(out,
         "}; /* macros_sz */\n\n"
-        "const " TYPE_BYTE " macros[] = {");
+        TYPE_BYTE " macros[] = {");
 
     for (i = mark; i < strings_n; i++) {
         if (flags & FLAG_DEBUG) {
@@ -313,13 +315,13 @@ int main (int argc, char **argv)
     fprintf(out,
         "}; /* macros */\n"
         "\n"
-        "const " TYPE_INT " strings_n = %d;\n"
-        "const " TYPE_INT " strings_sz [] = {",
+        TYPE_INT " strings_n = %d;\n"
+        TYPE_INT " strings_sz [] = {",
         mark);
     fprint_out_int(out, strings_sz, mark);
     fprintf(out,
         "}; /* strings_sz */\n"
-        "const " TYPE_BYTE " strings [] = {");
+        TYPE_BYTE " strings [] = {");
 
     for(i = 0; i < mark; i++) {
         if (flags & FLAG_DEBUG) {
