@@ -43,7 +43,7 @@
 #define TYPE_BYTE	"UWord8"
 #define TYPE_INT	"UWord16"
 
-static const unsigned int MAX_STR_LEN = (1 << 14);
+static const unsigned int MAX_STR_LEN = (1 << 9);
 
 void process_file(const char *n);
 
@@ -100,10 +100,11 @@ void process_file(const char *n)
 		} /* if */
 
 		if (char_count >= MAX_STR_LEN) {
-		    strings[strings_n] = buffer + bs;
 		    strings_sz[strings_n] = bs - saved_bs;
-		    saved_bs = bs;
 		    ++strings_n;
+
+		    saved_bs = bs;
+		    strings[strings_n] = buffer + bs;
 		    char_count -= MAX_STR_LEN;
 		}
 	} /* while */
@@ -219,8 +220,10 @@ int main (int argc, char **argv)
 				add_string(s, l, root_trie, j);
 			} /* for */
 			fprintf(stderr,
-				"\b%s",
-				progress[j % (sizeof progress/sizeof progress[0])]);
+				"\r%s %d/%d",
+				progress[j % (sizeof progress/sizeof progress[0])],
+				j, strings_n);
+			fflush(stderr);
 		} /* for */
 
 		/* SEARCH FOR THE MOST EFFICIENT MACRO SUBSTITUTION */
