@@ -39,3 +39,5 @@ test_deco_libs =
 test_deco: $(test_deco_objs)
 	$(CC) $(LDFLAGS) -o $@ $(test_deco_objs) $(test_deco_libs)
 test_deco.o: rom.i
+rom.i: td.txt.orig trie
+	trie -d -o $@ $< 2>trie.log
