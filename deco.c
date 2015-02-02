@@ -25,7 +25,7 @@
 
 #include "deco.h"
 
-#include "rom_com_fx.binDIFF.i"
+#include "rom.i"
 
 /* variables */
 
