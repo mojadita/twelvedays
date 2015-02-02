@@ -291,7 +291,7 @@ int main (int argc, char **argv)
                 assert((strings[ix] <= dst) && (dst + MACRO_SIZE < src) && (src <= end));
 
                 *dst++ = ESCAPE;
-                *dst++ = i; /* i is the macro index */
+                *dst++ = i + OFFSET; /* i is the macro index */
                 assert(n >= 0);
                 while (n--) *dst++ = *src++;
                 strings_sz[ix] -= max->l - MACRO_SIZE;
@@ -336,7 +336,7 @@ int main (int argc, char **argv)
                     D("%s[0x%02x, 0x%02x] ="),
                     (i < mark ? "strings" : "macros"),
                     ESCAPE,
-                    (i < mark ? i : i - mark));
+                    (i < mark ? i : i - mark) + OFFSET);
         } /* if */
         fprintf(out,
                 "\n    /* %s #%d */",

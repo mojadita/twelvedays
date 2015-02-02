@@ -38,6 +38,11 @@ test_deco_objs = test_deco.o deco.o
 test_deco_libs = 
 test_deco: $(test_deco_objs)
 	$(CC) $(LDFLAGS) -o $@ $(test_deco_objs) $(test_deco_libs)
-deco.o: rom.i
+
 rom.i: td.txt.orig trie
-	trie -d -o $@ $< 2>trie.log
+	trie -d -s -o $@ $< 2>trie.log
+
+trie_main.o trie.o deco.o test_deco.o: deco.h
+deco.o: rom.i
+test_main.o fprintbuf.o: fprintbuf.h
+trie.o trie_main.o: trie.h

@@ -27,8 +27,10 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* constants */
-#define ESCAPE      139
-#define ESCOUT      255
+#define ESCAPE      0x8b
+#define ESCOUT      0xff
+#define OFFSET      0x00
+#define ESCMAX      (ESCOUT - OFFSET - 1)
 
 /* types */
 

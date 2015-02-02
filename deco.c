@@ -46,8 +46,8 @@ int deco_macro(const UWord8 *in, UWord16 len, UWord8 *out)
                 *out++ = ESCAPE; res++;
             } else {
                 register int n = deco_macro(
-                        the_macros[*in],
-                        macros_sz[*in],
+                        the_macros[*in - OFFSET],
+                        macros_sz[*in - OFFSET],
                         out);
                 out += n; res += n;
             } /* if */
