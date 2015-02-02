@@ -47,7 +47,6 @@ int main()
 
     res = deco_string(buffer);
     write(1, buffer, res);
-
 }
 
 /* $Id: main.c.m4,v 1.7 2005/11/07 19:39:53 luis Exp $ */

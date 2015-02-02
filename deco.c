@@ -25,7 +25,7 @@
 
 #include "deco.h"
 
-#include "rom.i"
+#include "rom_com_fx.binDIFF.i"
 
 /* variables */
 
@@ -63,18 +63,21 @@ int deco_macro(const UWord8 *in, UWord16 len, UWord8 *out)
 int deco_string(UWord8 *out)
 {
     int i, res = 0;
+    const UWord8 *p = strings;
 
     /* INITIALIZATION */
     if (!the_strings) {
         the_strings = calloc(strings_n, sizeof(UWord8 *));
         for (i = 0; i < strings_n; i++) {
-            the_strings[i] = i ? the_strings[i-1] + strings_sz[i-1] : strings;
+            the_strings[i] = p;
+            p += strings_sz[i];
         } /* for */
     } /* if */
     if (!the_macros) {
         the_macros = calloc(macros_n, sizeof(UWord8 *));
         for (i = 0; i < macros_n; i++) {
-            the_macros[i] = i ? the_macros[i-1] + macros_sz[i-1] : macros;
+            the_macros[i] = p;
+            p += macros_sz[i];
         } /* for */
     } /* if */
 
@@ -84,6 +87,18 @@ int deco_string(UWord8 *out)
         n = deco_macro(the_strings[i], strings_sz[i], out);
         res += n; out += n;
     } /* for */
+
+    fprintf(stderr,
+            "Sizeof  strings_n: %8ld\n"
+            "Sizeof strings_sz: %8ld\n"
+            "Sizeof   macros_n: %8ld\n"
+            "Sizeof  macros_sz: %8ld\n"
+            "Sizeof    strings: %8ld\n"
+            "            Total: %8ld\n"
+            "           Output: %8ld\n",
+            sizeof strings_n,  sizeof strings_sz,  sizeof macros_n,  sizeof macros_sz,  sizeof strings,
+            sizeof strings_n + sizeof strings_sz + sizeof macros_n + sizeof macros_sz + sizeof strings,
+            res);
 
     return res;
 } /* deco */

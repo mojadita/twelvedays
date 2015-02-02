@@ -22,6 +22,7 @@
 
 /* Standard include files */
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -36,9 +37,10 @@
 #define FLAG_DEBUG      (1 << 0)
 #define FLAG_BINARY     (1 << 1)
 #define FLAG_PROGRESS   (1 << 2)
+#define FLAG_PRINT_STATE   (1 << 3)
 
 #define MAX (1<<24)
-#define N   512
+#define N   4096
 #define N_PER_ROW   16
 #define TYPE_BYTE   "const UWord8"
 #define TYPE_INT    "const UWord16"
@@ -176,28 +178,32 @@ int main (int argc, char **argv)
     int i;
     int n_passes = MAX_PASSES;
     FILE *out = stdout;
+    time_t now;
 
-    while ((opt = getopt(argc, argv, "dhPp:o:")) != EOF) {
+    time(&now);
+    while ((opt = getopt(argc, argv, "dhPp:o:s")) != EOF) {
         switch(opt) {
         case 'h': do_usage(); exit(0);
         case 'P': flags |= FLAG_PROGRESS; break;
         case 'p': n_passes = atol(optarg); break;
         case 'd': flags |= FLAG_DEBUG; break;
         case 'o': out = fopen(optarg, "wb"); break;
+        case 's': flags |= FLAG_PRINT_STATE; break;
         } /* switch */
     } /* while */
 
-    argc -= optind; argv += optind;
+    if (n_passes > MAX_PASSES) n_passes = MAX_PASSES;
+    if (n_passes < 1) n_passes = 1;
 
-    if (argc) {
-        for (i = 0; i < argc; i++)
+    if (argc > optind) {
+        for (i = optind; i < argc; i++)
             process_file(argv[i]);
     } else  process_file(stdin_name);
 
-    mark = strings_n;
+    mark = strings_n; /* beginning of macros */
 
     /* print the strings in the begining */
-    if (flags & FLAG_DEBUG)
+    if (flags & FLAG_PRINT_STATE)
         print_strings();
 
     for(i = 0; i < n_passes; i++) {
@@ -215,16 +221,21 @@ int main (int argc, char **argv)
         for (j = 0; j < strings_n; j++) {
             const byte *s;
             int l;
-            static char *progress[] = {
-                "\\", "|", "/", "-",
-            };
+
             for (s = strings[j], l = strings_sz[j]; l; s++, l--) {
                 add_string(s, l, root_trie, j);
+                if (*s == ESCAPE) {
+                    s++; l--;
+                } /* if */
             } /* for */
-            if (flags & FLAG_PROGRESS)
+            if (flags & FLAG_PROGRESS) {
+                static char *progress[] = {
+                    "\\", "|", "/", "-",
+                };
                 fprintf(stderr,
-                    "\b%s %d/%d",
+                    "\r%s %d/%d",
                     progress[j % 4], j+1, strings_n);
+            } /* if */
         } /* for */
 
         /* SEARCH FOR THE MOST EFFICIENT MACRO SUBSTITUTION */
@@ -240,7 +251,6 @@ int main (int argc, char **argv)
         } /* if */
 
         if (flags & FLAG_DEBUG) {
-            struct ref_buff *ref;
             /* WRITE THE MACRO FOUND */
             fprintbuf(stderr,
                 max->l, max->refs->b,
@@ -257,82 +267,84 @@ int main (int argc, char **argv)
 
         /* print the substitutions to be made. */
         if (flags & FLAG_DEBUG) {
-            for (ref = max->refs; ref; ref = ref->nxt) {
-                int         ix  = ref->ix;
-                const byte *src = ref->b + max->l;
-                byte       *dst = (byte *)ref->b;
-                const byte *end = strings[ix] + strings_sz[ix];
-                int n = strings_sz[ix] - (src - strings[ix]);
 
-                fprintf(stderr,
-                    D("SUBST: string[%d], beg_hole=0x%lx, end_hole=0x%lx, end=0x%lx\n"),
-                    ix, dst - strings[ix], src - strings[ix], end - strings[ix]);
+#define FOREACHSUBST(X) \
+            for (ref = max->refs; ref; ref = ref->nxt) { \
+                int          ix = ref->ix; \
+                const byte *src = ref->b + max->l; \
+                byte       *dst = (byte *)ref->b; \
+                const byte *end = strings[ix] + strings_sz[ix]; \
+                int           n = end - src; \
+                X \
             } /* for */
+
+            FOREACHSUBST(
+                    fprintf(stderr,
+                        D("SUBST: string[%d], beg_hole=0x%lx, end_hole=0x%lx, hole_sz=%ld, end=0x%lx\n"),
+                        ix, dst - strings[ix], src - strings[ix], src - dst, end - strings[ix]);
+                ) /* FOREACHSUBST */
         } /* if */
 
         /* substitute the strings as macro calls */
-        for (ref = max->refs; ref; ref = ref->nxt) {
-            int         ix  = ref->ix;
-            const byte *src = ref->b + max->l;
-            byte       *dst = (byte *)ref->b;
-            const byte *end = strings[ix] + strings_sz[ix];
-            int n = strings_sz[ix] - (src - strings[ix]);
+        FOREACHSUBST(
 
-            *dst++ = ESCAPE;
-            *dst++ = i; /* i is the macro index */
-            assert(n >= 0);
-            while (n--) *dst++ = *src++;
-            strings_sz[ix] -= max->l - MACRO_SIZE;
-        } /* for */
+                assert((strings[ix] <= dst) && (dst + MACRO_SIZE < src) && (src <= end));
+
+                *dst++ = ESCAPE;
+                *dst++ = i; /* i is the macro index */
+                assert(n >= 0);
+                while (n--) *dst++ = *src++;
+                strings_sz[ix] -= max->l - MACRO_SIZE;
+
+            ) /* FOREACHSUBST */
 
         /* delete the trie as it is no more needed */
         del_trie(root_trie);
+
         /* print the strings */
-        if (flags & FLAG_DEBUG)
+        if (flags & FLAG_PRINT_STATE)
             print_strings();
     } /* for */
 
     /* PRINT OUTPUT */
+    fprintf(out, "/* date: %s"
+            " * command:", asctime(localtime(&now)));
+    for (i = 0; i < argc; i++) {
+        fprintf(out, " %s", argv[i]);
+    } /* for */
+    fprintf(out, "\n */\n\n");
+
+    fprintf(out,
+        TYPE_INT " strings_n = %d;\n"
+        TYPE_INT " strings_sz[] = {",
+        mark);
+    fprint_out_int(out, strings_sz, mark);
+    fprintf(out, "}; /* strings_sz */\n\n");
+
     fprintf(out,
         TYPE_INT " macros_n = %d;\n"
         TYPE_INT " macros_sz[] = {",
         strings_n - mark);
     fprint_out_int(out, strings_sz + mark, strings_n - mark);
-    fprintf(out,
-        "}; /* macros_sz */\n\n"
-        TYPE_BYTE " macros[] = {");
+    fprintf(out, "}; /* macros_sz */\n\n");
 
-    for (i = mark; i < strings_n; i++) {
+    fprintf(out, TYPE_BYTE " strings[] = {");
+    for (i = 0; i < strings_n; i++) {
         if (flags & FLAG_DEBUG) {
-            fprintbuf(stderr, strings_sz[i], strings[i],
-                D("macros[0x%02x, 0x%02x] ="),
-                ESCAPE, i-mark);
+            fprintbuf(stderr,
+                    strings_sz[i], strings[i],
+                    D("%s[0x%02x, 0x%02x] ="),
+                    (i < mark ? "strings" : "macros"),
+                    ESCAPE,
+                    (i < mark ? i : i - mark));
         } /* if */
-        fprintf(out, "\n    /* macro #%d */", i - mark);
+        fprintf(out,
+                "\n    /* %s #%d */",
+                (i < mark ? "string" : "macro"),
+                (i < mark ? i : i - mark));
         fprint_out_byte(out, strings[i], strings_sz[i]);
     } /* for */
-
-    fprintf(out,
-        "}; /* macros */\n"
-        "\n"
-        TYPE_INT " strings_n = %d;\n"
-        TYPE_INT " strings_sz [] = {",
-        mark);
-    fprint_out_int(out, strings_sz, mark);
-    fprintf(out,
-        "}; /* strings_sz */\n"
-        TYPE_BYTE " strings [] = {");
-
-    for(i = 0; i < mark; i++) {
-        if (flags & FLAG_DEBUG) {
-            fprintbuf(stderr, strings_sz[i], strings[i],
-                D("strings[%d] =>"), i);
-        } /* if */
-
-        fprintf(out, "\n    /* string #%d */", i);
-        fprint_out_byte(out, strings[i], strings_sz[i]);
-        fprintf(out, "}; /* strings */\n\n");
-    } /* for */
+    fprintf(out, "}; /* strings */\n\n");
 
     if (out != stdout) fclose(out);
 
