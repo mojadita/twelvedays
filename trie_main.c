@@ -331,12 +331,17 @@ int main (int argc, char **argv)
     fprintf(out, TYPE_BYTE " strings[] = {");
     for (i = 0; i < strings_n; i++) {
         if (flags & FLAG_DEBUG) {
-            fprintbuf(stderr,
-                    strings_sz[i], strings[i],
-                    D("%s[0x%02x, 0x%02x] ="),
-                    (i < mark ? "strings" : "macros"),
-                    ESCAPE,
-                    (i < mark ? i : i - mark) + OFFSET);
+            if (i < mark) {
+                fprintbuf(stderr,
+                        strings_sz[i], strings[i],
+                        D("string[0x%02x] ="),
+                        i);
+            } else {
+                fprintbuf(stderr,
+                        strings_sz[i], strings[i],
+                        D("macro<0x%02x,0x%02x> ="),
+                        ESCAPE, i - mark + OFFSET);
+            } /* if */
         } /* if */
         fprintf(out,
                 "\n    /* %s #%d */",
