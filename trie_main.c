@@ -36,6 +36,12 @@
 #define MAX 65536
 #define N	512
 
+#ifdef DEBUG
+#define P(args...)
+#else
+#define P(args...) fprintf(stderr, args)
+#endif
+
 void process_line(const char *n);
 void process_file(const char *n);
 
@@ -74,16 +80,16 @@ void process_line(const char *n)
 		exit(EXIT_FAILURE);
 	} /* if */
 
-	printf(D("Processing [%s]: by lines BEGIN.\n"), n ? n : stdin_name);
+	P(D("Processing [%s]: by lines BEGIN.\n"), n ? n : stdin_name);
 
 	for (; (strings_n < N) && fgets(buffer, sizeof buffer, fin); strings_n++) {
 		buffer[strlen(buffer)-1] = '\0'; /* eliminate the last \n char. */
 		strings[strings_n] = strdup(buffer);
-		printf(D("  line[%5d] = [%s]\n"), strings_n, strings[strings_n]);
+		P(D("  line[%5d] = [%s]\n"), strings_n, strings[strings_n]);
 	} /* while */
 
 	if (n) fclose(fin);
-	printf(D("Processing [%s]: by lines END.\n"), n ? n : stdin_name);
+	P(D("Processing [%s]: by lines END.\n"), n ? n : stdin_name);
 } /* process_line */
 
 void process_file(const char *n)
@@ -100,7 +106,7 @@ void process_file(const char *n)
 		exit(EXIT_FAILURE);
 	} /* if */
 
-	printf(D("Processing [%s]: in block BEGIN.\n"), n);
+	P(D("Processing [%s]: in block BEGIN.\n"), n);
 
 	for (; (strings_n < N)
 		&& ((rd = read(in, buffer, sizeof buffer - 1)) > 0);
@@ -108,7 +114,7 @@ void process_file(const char *n)
 	{
 		buffer[rd] = 0;
 		strings[strings_n] = strdup(buffer);
-		printf(D("  string[%5d] = [%s]\n"), strings_n, strings[strings_n]);
+		P(D("  string[%5d] = [%s]\n"), strings_n, strings[strings_n]);
 	} /* while */
 
 	if (rd < 0) {
@@ -119,7 +125,7 @@ void process_file(const char *n)
 	} /* if */
 
 	if (n) close(in);
-	printf(D("Processing [%s]: in block END\n"), n);
+	P(D("Processing [%s]: in block END\n"), n);
 } /* process_file */
 
 /**
@@ -136,8 +142,8 @@ int main (int argc, char **argv)
 	int opt;
 	void (*process)(const char *) = process_line;
 	int i, mark;
-	int n_passes = 10;
-    char *tab = "";
+    char *tab = "!#$%&'()*+-/<=>?@[]^_`{|}~,.:;";
+	int n_passes = strlen(tab);
 
 	while ((opt = getopt(argc, argv, "hflp:t:")) != EOF) {
 		switch(opt) {
@@ -146,7 +152,10 @@ int main (int argc, char **argv)
 		case 'f': process = process_file; break;
 		case 'l': process = process_line; break;
 		case 'p': n_passes = atol(optarg); break;
-        case 't': tab = optarg; n_passes = strlen(tab); break;
+        case 't': {
+                      int l = strlen(tab = optarg);
+                      if (l < n_passes) n_passes = l;
+                  } break;
 		} /* switch */
 	} /* while */
 
@@ -163,8 +172,9 @@ int main (int argc, char **argv)
 		int j;
 		char *o;
 		struct ref_buff *ref;
+        int savings;
 
-		printf(D("PASS #0x%02x:\n"), i);
+		P(D("PASS #0x%02x[%c]:\n"), i, tab[i]);
 		assert(root_trie = new_trie());
 		for (j = 0; j < strings_n; j++) {
 			char *s;
@@ -173,10 +183,10 @@ int main (int argc, char **argv)
 		} /* for */
 		max = walk_trie(root_trie);
 
-		if (max == root_trie) break;
+        if ((savings = weight_function(max)) <= 0) break;
 
-		printf(D("  max: [%.*s], l=%d, n=%d, savings=%d\n"),
-			max->l, max->refs->b, max->l, max->n, weight_function(max));
+		P(D("  max: [%.*s], l=%d, n=%d, savings=%d\n"),
+			max->l, max->refs->b, max->l, max->n, savings);
 
 		/* copy the string macro */
 		o = strings[strings_n++] = malloc(max->l + 1);
@@ -197,13 +207,23 @@ int main (int argc, char **argv)
 		del_trie(root_trie);
 	} /* for */
 
-	for (i = mark; i < strings_n; i++) {
-		printf(D("  macro[%d] = [%c%s]\n"), i - mark, tab[i-mark], strings[i]);
-	} /* for */
+    printf("char*t=\"");
+    for (i = mark; i < strings_n; i++)
+        printf("%c", tab[i-mark]);
+    printf("\",*m[]={");
+	for (i = mark; i < strings_n; i++)
+		printf("%s/*%c*/\"%s\"",
+                i == mark ? "" : ",",
+                tab[i-mark],
+                strings[i]);
+    printf("},*s=");
 
 	for(i = 0; i < mark; i++) {
-		printf(D("  string[%d] = [%s]\n"), i, strings[i]);
+		printf("%s\"%s\"", i ? "," : "", strings[i]);
 	} /* for */
+    printf(",*strchr();r(char*s){for(;*s;s++){char"
+            "*p=strchr(t,*s);if(p)r(m[p-t]);else "
+            "putchar(*s);}}main(){r(s);}\n");
 
 } /* main */
 

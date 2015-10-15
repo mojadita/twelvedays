@@ -132,7 +132,7 @@ void del_trie(struct trie_node *t)
 int weight_function(struct trie_node *n)
 {
 	return n
-		? (n->l - 1)*(n->n - 1) - 5
+		? n->l*n->n - n->n - n->l - 4
 		: -1;
 } /* f */
 

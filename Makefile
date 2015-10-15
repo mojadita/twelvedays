@@ -3,7 +3,7 @@
 # Date: vie dic 12 19:19:35 EET 2014
 # Disclaimer: (C) 2014 LUIS COLORADO
 
-targets = ct td trie exp
+targets = ct td trie exp check_char
 
 all: $(targets)
 clean:
@@ -23,6 +23,11 @@ trie_objs= trie_main.o trie.o
 trie_libs= -lavl
 trie: $(trie_objs)
 	$(CC) $(LDFLAGS) -o $@ $(trie_objs) $(trie_libs)
+
+check_char_objs= check_char.o
+check_char_libs=
+check_char: $(check_char_objs)
+	$(CC) $(LDFLAGS) $(check_char_ldflags) -o $@ $($@_objs) $(@_libs)
 
 exp_objs = exp.o
 exp_libs = 

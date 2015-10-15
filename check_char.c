@@ -11,7 +11,7 @@ int main()
     while ((i = getchar()) != EOF) tab[i] = 1;
 
     for (i = ' '; i < 0x7f; i++) {
-        if (!tab[i]) printf("%s%d [%c]", n++ ? ", " : "", i, i);
+        if (!tab[i]) printf("%c", i);
     }
     printf("\n");
 }
