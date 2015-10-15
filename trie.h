@@ -56,6 +56,7 @@ struct trie_node *new_trie(void);
 struct trie_node *add_string(const char *s, struct trie_node *t, const void *d);
 struct trie_node *walk_trie(struct trie_node *t);
 void del_trie(struct trie_node *t);
+int weight_function(struct trie_node *n);
 
 #endif /* TRIE_H */
 /* Do not include anything AFTER the line above, as it would not be

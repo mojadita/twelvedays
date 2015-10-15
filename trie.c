@@ -129,10 +129,10 @@ void del_trie(struct trie_node *t)
  * @param n node to calculate f for.
  * @return the value calculated as above.
  */
-static int f(struct trie_node *n)
+int weight_function(struct trie_node *n)
 {
 	return n
-		? (n->l - 1)*(n->n - 1) - 2
+		? (n->l - 1)*(n->n - 1) - 5
 		: -1;
 } /* f */
 
@@ -148,7 +148,7 @@ struct trie_node *walk_trie(struct trie_node *t)
 {
 	AVL_ITERATOR i;
 	struct trie_node *res = t;
-	int fres = f(res);
+	int fres = weight_function(res);
 	
 	for (i = avl_tree_first(t->sub); i; i = avl_iterator_next(i)) {
 		struct trie_node *n = avl_iterator_data(i);
@@ -162,7 +162,7 @@ struct trie_node *walk_trie(struct trie_node *t)
 			t->c, t->n, t->l);
 #endif
 		n = walk_trie(n);
-		if ((fn = f(n)) > fres) {
+		if ((fn = weight_function(n)) > fres) {
 			res = n;
 			fres = fn;
 		} /* if */

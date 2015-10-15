@@ -137,14 +137,16 @@ int main (int argc, char **argv)
 	void (*process)(const char *) = process_line;
 	int i, mark;
 	int n_passes = 10;
+    char *tab = "";
 
-	while ((opt = getopt(argc, argv, "hflp:")) != EOF) {
+	while ((opt = getopt(argc, argv, "hflp:t:")) != EOF) {
 		switch(opt) {
 		case 'h':
 		  do_usage(); exit(0);
 		case 'f': process = process_file; break;
 		case 'l': process = process_line; break;
 		case 'p': n_passes = atol(optarg); break;
+        case 't': tab = optarg; n_passes = strlen(tab); break;
 		} /* switch */
 	} /* while */
 
@@ -156,7 +158,7 @@ int main (int argc, char **argv)
 	} else	process(stdin_name);
 
 	mark = strings_n;
-	for(i = 0x80; i < 0x80 + n_passes; i++) {
+	for(i = 0; i < n_passes; i++) {
 		struct trie_node *root_trie, *max;
 		int j;
 		char *o;
@@ -173,8 +175,8 @@ int main (int argc, char **argv)
 
 		if (max == root_trie) break;
 
-		printf(D("  max: [%.*s], l=%d, n=%d\n"),
-			max->l, max->refs->b, max->l, max->n);
+		printf(D("  max: [%.*s], l=%d, n=%d, savings=%d\n"),
+			max->l, max->refs->b, max->l, max->n, weight_function(max));
 
 		/* copy the string macro */
 		o = strings[strings_n++] = malloc(max->l + 1);
@@ -186,7 +188,7 @@ int main (int argc, char **argv)
 		for (ref = max->refs; ref; ref = ref->nxt) {
 			char *s = ref->b + max->l;
 			char *t = ref->b;
-			*t++ = i;
+			*t++ = tab[i];
 			while (*s) *t++ = *s++;
 			*t++ = '\0';
 		} /* for */
@@ -196,7 +198,7 @@ int main (int argc, char **argv)
 	} /* for */
 
 	for (i = mark; i < strings_n; i++) {
-		printf(D("  macro[%d] = [%c%s]\n"), i - mark, 0x80+i-mark, strings[i]);
+		printf(D("  macro[%d] = [%c%s]\n"), i - mark, tab[i-mark], strings[i]);
 	} /* for */
 
 	for(i = 0; i < mark; i++) {
