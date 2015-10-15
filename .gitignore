@@ -3,3 +3,4 @@ td
 trie
 *.o
 exp
+check_char
