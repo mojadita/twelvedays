@@ -221,8 +221,8 @@ int main (int argc, char **argv)
 	for(i = 0; i < mark; i++) {
 		printf("%s\"%s\"", i ? "," : "", strings[i]);
 	} /* for */
-    printf(",*strchr();r(char*s){for(;*s;s++){char"
-            "*p=strchr(t,*s);if(p)r(m[p-t]);else "
+    printf("*p,*strchr();r(char*s){for(;*s;s++){"
+            "p=strchr(t,*s);if(p)r(m[p-t]);else "
             "putchar(*s);}}main(){r(s);}\n");
 
 } /* main */
